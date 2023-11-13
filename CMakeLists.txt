@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(raylib CXX)
+project(mraylib CXX)
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/StaticAnalyzers.cmake)
 include(cmake/CompilerWarnings.cmake)
