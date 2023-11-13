@@ -1,0 +1,8 @@
+#!/bin/sh
+build_type=$1
+[ "$build_type" ] || build_type="Release"
+echo "Using CMAKE_BUILD_TYPE $build_type"
+
+cmake . -B bin -DCMAKE_TOOLCHAIN_FILE=bin/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release &&
+  cp bin/compile_commands.json . &&
+  cmake --build bin
