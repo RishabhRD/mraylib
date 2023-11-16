@@ -20,7 +20,7 @@ int main() {
 
   mrl::camera_orientation_t camera_orientation{
       .position = {0, 0, 0},
-      .direction = mrl::vec3{0, -1, 0},
+      .direction = mrl::vec3{0, 0, -1},
   };
   mrl::in_memory_image img{scene.width, scene.height};
   mrl::trace(camera, camera_orientation, scene, img);

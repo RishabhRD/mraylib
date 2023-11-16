@@ -10,9 +10,11 @@
 namespace mrl {
 
 constexpr color_t ray_color(ray_t const &ray) {
+  color_t c1{12, 34, 237};
+  color_t c2{237, 47, 12};
   auto dir = ray.direction.val();
-  auto a = 0.5 * (dir.x + 1.0);
-  return (1.0 - a) * color_t{1.0, 1.0, 1.0} + a * color_t{0.5, 0.7, 1.0};
+  auto a = (dir.y + 1.0) / 2;
+  return (1.0 - a) * c1 + a * c2;
 }
 
 template <RandomAccessImage Image>
@@ -21,7 +23,7 @@ constexpr void trace(camera_t const &camera,
                      scene_t const &scene, Image &img) {
   auto [u_dir, v_dir] = viewport_direction(orientation);
   auto viewport_u = u_dir * camera.viewport.width;
-  auto viewport_v = u_dir * camera.viewport.height;
+  auto viewport_v = v_dir * camera.viewport.height;
 
   auto pixel_delta_u = viewport_u / scene.width;
   auto pixel_delta_v = viewport_v / scene.height;
