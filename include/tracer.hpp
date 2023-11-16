@@ -3,7 +3,6 @@
 #include "camera.hpp"
 #include "camera_orientation.hpp"
 #include "color.hpp"
-#include "dimension.hpp"
 #include "image/concepts.hpp"
 #include "ray.hpp"
 #include "viewport_utils.hpp"
@@ -14,22 +13,21 @@ constexpr color_t ray_color(ray_t const &) { return {0, 0, 0}; }
 
 template <RandomAccessImage Image>
 void trace(camera_t camera, camera_orientation_t orientation,
-           dimension_t<int> scene_dimension, Image &img) {
-  auto [scene_width, scene_height] = scene_dimension;
+           scene_t const &scene, Image &img) {
   auto [u_dir, v_dir] = viewport_direction(orientation);
   auto viewport_u = u_dir * camera.viewport.width;
   auto viewport_v = u_dir * camera.viewport.height;
 
-  auto pixel_delta_u = viewport_u / scene_width;
-  auto pixel_delta_v = viewport_v / scene_height;
+  auto pixel_delta_u = viewport_u / scene.width;
+  auto pixel_delta_v = viewport_v / scene.height;
 
   auto viewport_top_left = viewport_topleft(viewport_u, viewport_v, orientation,
                                             camera.focal_length);
 
   auto pixel00_loc = viewport_top_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-  for (int j = 0; j < scene_height; ++j) {
-    for (int i = 0; i < scene_width; ++i) {
+  for (int j = 0; j < scene.height; ++j) {
+    for (int i = 0; i < scene.width; ++i) {
       auto pixel_center = pixel00_loc + i * pixel_delta_u + j * pixel_delta_v;
       auto camera_center = orientation.position;
       ray_t r{
