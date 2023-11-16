@@ -9,11 +9,16 @@
 
 namespace mrl {
 
-constexpr color_t ray_color(ray_t const &) { return {0, 0, 0}; }
+constexpr color_t ray_color(ray_t const &ray) {
+  auto dir = ray.direction.val();
+  auto a = 0.5 * (dir.x + 1.0);
+  return (1.0 - a) * color_t{1.0, 1.0, 1.0} + a * color_t{0.5, 0.7, 1.0};
+}
 
 template <RandomAccessImage Image>
-void trace(camera_t camera, camera_orientation_t orientation,
-           scene_t const &scene, Image &img) {
+constexpr void trace(camera_t const &camera,
+                     camera_orientation_t const &orientation,
+                     scene_t const &scene, Image &img) {
   auto [u_dir, v_dir] = viewport_direction(orientation);
   auto viewport_u = u_dir * camera.viewport.width;
   auto viewport_v = u_dir * camera.viewport.height;
