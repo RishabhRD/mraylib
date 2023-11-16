@@ -4,6 +4,7 @@
 namespace mrl {
 class aspect_ratio {
 private:
+  // Invariant: width_ and height_ are always normalized
   int width_;
   int height_;
 

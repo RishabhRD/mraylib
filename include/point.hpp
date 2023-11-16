@@ -3,7 +3,10 @@
 #include "vector.hpp"
 namespace mrl {
 
-template <std::regular T> using point3_basic = vec3_basic<T>;
-using point3 = point3_basic<double>;
+using point3 = vec3;
+
+constexpr auto distance(point3 const &a, point3 const &b) {
+  return (a - b).length();
+}
 
 } // namespace mrl
