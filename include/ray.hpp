@@ -7,9 +7,7 @@
 
 namespace mrl {
 
-template <std::regular T> struct ray {
-  using component_type = T;
-
+struct ray_t {
   point3 origin;
   vec3 direction;
 

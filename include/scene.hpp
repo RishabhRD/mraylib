@@ -4,7 +4,7 @@
 #include <algorithm>
 
 namespace mrl {
-constexpr int scene_height(aspect_ratio ratio, int width) {
-  return std::min(1, static_cast<int>(width / ratio.val()));
+constexpr int scene_height(aspect_ratio_t ratio, int width) {
+  return std::max(1, static_cast<int>(width / ratio.val()));
 }
 } // namespace mrl

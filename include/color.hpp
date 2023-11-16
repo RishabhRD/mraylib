@@ -1,11 +1,11 @@
 #pragma once
 
 namespace mrl {
-struct color {
+struct color_t {
   double r;
   double g;
   double b;
 
-  friend bool operator==(color const &, color const &) = default;
+  friend bool operator==(color_t const &, color_t const &) = default;
 };
 } // namespace mrl

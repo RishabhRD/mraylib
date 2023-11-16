@@ -2,7 +2,7 @@
 
 #include <numeric>
 namespace mrl {
-class aspect_ratio {
+class aspect_ratio_t {
 private:
   // Invariant: width_ and height_ are always normalized
   int width_;
@@ -10,7 +10,7 @@ private:
 
 public:
   // Precondition: width > 0 && height > 0
-  constexpr aspect_ratio(int width, int height)
+  constexpr aspect_ratio_t(int width, int height)
       : width_(width), height_(height) {
     auto gcd = std::gcd(width_, height_);
     width_ /= gcd;

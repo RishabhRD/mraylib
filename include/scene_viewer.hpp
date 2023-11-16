@@ -4,8 +4,8 @@
 #include "camera_orientation.hpp"
 
 namespace mrl {
-struct scene_viewer {
-  camera camera;
-  camera_orientation camera_orientation;
+struct scene_viewer_t {
+  camera_t camera;
+  camera_orientation_t camera_orientation;
 };
 } // namespace mrl

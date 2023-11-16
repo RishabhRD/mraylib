@@ -1,11 +1,13 @@
 #pragma once
 
+#include "direction.hpp"
 #include "point.hpp"
 #include "vector.hpp"
 
 namespace mrl {
-struct camera_orientation {
+struct camera_orientation_t {
   point3 position;
-  vec3 direction;
+  direction_t direction;
 };
+
 } // namespace mrl

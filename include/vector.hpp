@@ -75,7 +75,7 @@ constexpr vec3 cross(vec3 const &a, vec3 const &b) {
   return {a.y * b.z - a.z - b.y, a.z * b.x - b.z * a.x, a.x * b.y - b.x * a.y};
 }
 
-template <typename T> constexpr vec3 unit_vector(vec3 const &v) {
-  return v / v.length();
-}
+constexpr vec3 unit_vector(vec3 const &v) { return v / v.length(); }
+
+constexpr vec3 normalize(vec3 const &v) { return unit_vector(v); }
 } // namespace mrl
