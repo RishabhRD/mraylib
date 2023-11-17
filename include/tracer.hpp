@@ -24,7 +24,7 @@ constexpr color_t ray_color(ray_t const &ray) {
     auto N = normal(sphere, ray.at(t)).val();
     return 0.5 * color_t(N.x + 1, N.y + 1, N.z + 1);
   }
-  auto c1 = from_rgb(179, 89, 29);
+  auto c1 = from_rgb(17, 76, 166);
   auto c2 = from_rgb(255, 255, 255);
   auto dir = ray.direction.val();
   auto a = (dir.y + 1.0) / 2;
