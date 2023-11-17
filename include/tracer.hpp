@@ -5,13 +5,24 @@
 #include "color.hpp"
 #include "image/concepts.hpp"
 #include "ray.hpp"
+#include "shapes/sphere.hpp"
 #include "viewport_utils.hpp"
 
 namespace mrl {
 
-constexpr color_t ray_color(ray_t const &ray) {
-  color_t c1{12, 34, 237};
-  color_t c2{237, 47, 12};
+inline color_t ray_color(ray_t const &ray) {
+  sphere_obj_t sphere{
+      .sphere =
+          {
+              .radius = 0.5,
+          },
+      .center = {0, 0, -1},
+  };
+  if (hit(sphere, ray).size() > 0) {
+    return {1, 0, 0};
+  }
+  color_t c1{1, 1, 1};
+  color_t c2{100, 100, 100};
   auto dir = ray.direction.val();
   auto a = (dir.y + 1.0) / 2;
   return (1.0 - a) * c1 + a * c2;
