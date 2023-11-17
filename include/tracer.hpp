@@ -18,8 +18,11 @@ constexpr color_t ray_color(ray_t const &ray) {
           },
       .center = {0, 0, -1},
   };
-  if (hit(sphere, ray)) {
-    return {1, 0, 0};
+  auto t_opt = hit(sphere, ray);
+  if (t_opt) {
+    auto t = *t_opt;
+    auto N = normal(sphere, ray.at(t)).val();
+    return 0.5 * color_t(N.x + 1, N.y + 1, N.z + 1);
   }
   auto c1 = from_rgb(179, 89, 29);
   auto c2 = from_rgb(255, 255, 255);

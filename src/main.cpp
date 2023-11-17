@@ -11,7 +11,7 @@
 
 int main() {
   mrl::aspect_ratio_t ratio{16, 9};
-  auto scene = mrl::make_scene(ratio, 400);
+  auto scene = mrl::make_scene(ratio, 600);
   auto viewport = mrl::make_viewport(scene, 2.0);
   mrl::camera_t camera{
       .viewport = viewport,
