@@ -26,10 +26,16 @@ inline std::vector<double> hit(sphere_obj_t const &sphere, ray_t const &r) {
   auto discriminant = calc_discriminant(a, b, c);
   auto discriminant_sqrt = std::sqrt(discriminant);
   if (discriminant == 0) {
-    res.push_back(-b / (2 * a));
+    auto t1 = -b / (2 * a);
+    if (t1 >= 0)
+      res.push_back(t1);
   } else if (discriminant > 0) {
-    res.push_back((-b - discriminant_sqrt) / (2 * a));
-    res.push_back((-b + discriminant_sqrt) / (2 * a));
+    auto t1 = (-b - discriminant_sqrt) / (2 * a);
+    auto t2 = (-b + discriminant_sqrt) / (2 * a);
+    if (t1 >= 0)
+      res.push_back(t1);
+    if (t2 >= 0)
+      res.push_back(t2);
   }
   return res;
 }
