@@ -5,9 +5,8 @@
 #include <sstream>
 namespace mrl {
 inline auto write_ppm_color_str(std::ostream &os, color_t color) {
-  os << static_cast<int>(255.999 * color.r) << ' '
-     << static_cast<int>(255.999 * color.g) << ' '
-     << static_cast<int>(255.999 * color.b) << '\n';
+  auto [r, g, b] = to_rgb(color);
+  os << r << ' ' << g << ' ' << b << '\n';
 }
 
 inline auto convert_to_ppm_str(color_t color) {
