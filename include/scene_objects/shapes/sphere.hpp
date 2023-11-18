@@ -2,6 +2,7 @@
 
 #include "direction.hpp"
 #include "equation.hpp"
+#include "hit_record.hpp"
 #include "point.hpp"
 #include "ray.hpp"
 #include "vector.hpp"
@@ -19,7 +20,9 @@ struct sphere_obj_t {
   point3 center;
 };
 
-constexpr std::optional<double> hit(sphere_obj_t const &obj, ray_t const &r) {
+// Postcondition:
+//   - Returns the least possible t if any
+constexpr std::optional<double> hit_t(sphere_obj_t const &obj, ray_t const &r) {
   auto oc = r.origin - obj.center;
   auto a = r.direction.val().length_square();
   auto half_b = dot(oc, r.direction.val());
@@ -37,7 +40,24 @@ constexpr std::optional<double> hit(sphere_obj_t const &obj, ray_t const &r) {
   return std::nullopt;
 }
 
-constexpr direction_t normal(sphere_obj_t const &obj, point3 const &p) {
+constexpr direction_t calc_normal(sphere_obj_t const &obj, point3 const &p) {
   return p - obj.center;
 }
+
+// Postcondition:
+//   - If ray doesn't intersect then return nullopt
+//   - t should be the minimum possible value for which ray intersects object
+constexpr std::optional<hit_record_t> hit(sphere_obj_t const &obj,
+                                          ray_t const &r) {
+  auto t_opt = hit_t(obj, r);
+  return t_opt.transform([&obj, &r](double t) {
+    auto point = r.at(t);
+    return hit_record_t{
+        .ray_t = t,
+        .hit_point = point,
+        .normal = calc_normal(obj, point),
+    };
+  });
+}
+
 } // namespace mrl

@@ -3,12 +3,24 @@
 #include "camera.hpp"
 #include "camera_orientation.hpp"
 #include "color.hpp"
+#include "direction.hpp"
 #include "image/concepts.hpp"
 #include "ray.hpp"
+#include "scene_objects/concepts.hpp"
 #include "scene_objects/shapes/sphere.hpp"
+#include "vector.hpp"
 #include "viewport_utils.hpp"
 
 namespace mrl {
+
+namespace __details {
+// Postcondition:
+//   - Returns the normal in opposite direction of ray_dir
+constexpr direction_t normal_dir(direction_t normal, direction_t ray_dir) {
+  return dot(normal.val(), ray_dir.val()) <= 0 ? normal
+                                               : dir_from_unit(-normal.val());
+}
+} // namespace __details
 
 constexpr color_t ray_color(ray_t const &ray) {
   sphere_obj_t sphere{
@@ -18,10 +30,9 @@ constexpr color_t ray_color(ray_t const &ray) {
           },
       .center = {0, 0, -1},
   };
-  auto t_opt = hit(sphere, ray);
-  if (t_opt) {
-    auto t = *t_opt;
-    auto N = normal(sphere, ray.at(t)).val();
+  auto hit_record = hit(sphere, ray);
+  if (hit_record) {
+    auto N = __details::normal_dir(hit_record->hit_point, ray.direction).val();
     return 0.5 * color_t(N.x + 1, N.y + 1, N.z + 1);
   }
   auto c1 = from_rgb(17, 76, 166);

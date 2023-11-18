@@ -4,6 +4,11 @@
 #include <ostream>
 
 namespace mrl {
+
+// NOTE: this is there to solve scoping issue... C++ things
+class direction_t;
+constexpr direction_t dir_from_unit(vec3 vec);
+
 class direction_t {
   vec3 direction_;
 
@@ -31,9 +36,10 @@ public:
 
   // Precondition:
   //   - vec should be a unit vector
+  //
   // Postcondition:
   //   - Guarantees that no call to std::sqrt is made in construction
-  friend constexpr direction_t dir_from_unit_vec(vec3 vec) {
+  friend constexpr direction_t dir_from_unit(vec3 vec) {
     direction_t dir;
     dir.direction_ = vec;
     return dir;
