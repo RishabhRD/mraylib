@@ -1,12 +1,15 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 project(mraylib CXX)
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/StaticAnalyzers.cmake)
 include(cmake/CompilerWarnings.cmake)
 include(package.cmake)
 
+add_compile_options(-std=c++2b)
+# TODO: clang-tidy creating problem with the same
+# set(CMAKE_CXX_STANDARD 23)
+
 add_library(project_options INTERFACE)
-target_compile_features(project_options INTERFACE cxx_std_20)
 
 add_library(project_warnings INTERFACE)
 set_project_warnings(project_warnings)
