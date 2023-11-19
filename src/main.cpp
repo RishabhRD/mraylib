@@ -4,6 +4,10 @@
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
 #include "scene.hpp"
+#include "scene_objects/any_scene_object.hpp"
+#include "scene_objects/debug/debug_object.hpp"
+#include "scene_objects/debug/hooks/noop_hook.hpp"
+#include "scene_objects/debug/hooks/tagged_stream_hook.hpp"
 #include "scene_objects/scene_object_list.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "tracer.hpp"
@@ -24,11 +28,17 @@ int main() {
       .position = {0, 0, 0},
       .direction = mrl::vec3{0, 0, -1},
   };
+  auto small_sphere =
+      mrl::sphere_obj_t{.sphere{.radius = 0.5}, .center{0, 0, -1}};
+  auto big_sphere =
+      mrl::sphere_obj_t{.sphere{.radius = 100}, .center{0, -100.5, -1}};
 
-  mrl::scene_object_list<mrl::sphere_obj_t> world{
-      mrl::sphere_obj_t{.sphere{.radius = 0.5}, .center{0, 0, -1}},
-      mrl::sphere_obj_t{.sphere{.radius = 100}, .center{0, -100.5, -1}},
-  };
+  mrl::any_scene_object small =
+      mrl::debug_obj_t{small_sphere, mrl::noop_hook{}};
+  mrl::any_scene_object big =
+      mrl::debug_obj_t{big_sphere, mrl::tagged_stream_hook{std::cerr, 101}};
+
+  mrl::scene_object_list<mrl::any_scene_object> world{small, big};
 
   mrl::in_memory_image img{scene.width, scene.height};
   mrl::trace(world, img, camera, camera_orientation);
