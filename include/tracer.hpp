@@ -26,9 +26,7 @@ template <SceneObject Object>
 constexpr color_t ray_color(ray_t const &ray, Object const &world) {
   auto hit_record = hit(world, ray);
   if (hit_record) {
-    // auto N = __details::normal_dir(hit_record->hit_point,
-    // ray.direction).val();
-    auto N = hit_record->normal.val();
+    auto N = __details::normal_dir(hit_record->normal, ray.direction).val();
     return 0.5 * (color_t{N.x, N.y, N.z} + color_t{1, 1, 1});
   }
   auto dir = ray.direction.val();
