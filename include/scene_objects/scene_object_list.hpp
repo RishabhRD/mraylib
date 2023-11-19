@@ -11,10 +11,10 @@
 #include <vector>
 
 namespace mrl {
-template <Hittable T, typename Allocator = std::allocator<T>>
+template <SceneObject T, typename Allocator = std::allocator<T>>
 using scene_object_list = std::vector<T, Allocator>;
 
-template <Hittable T, typename Allocator>
+template <SceneObject T, typename Allocator>
 std::optional<hit_record_t> hit(scene_object_list<T, Allocator> const &obj,
                                 ray_t const &ray) {
   namespace rv = std::views;

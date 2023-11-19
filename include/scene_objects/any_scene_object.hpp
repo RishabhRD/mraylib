@@ -9,7 +9,7 @@
 namespace mrl {
 class any_scene_object {
 public:
-  template <Hittable T>
+  template <SceneObject T>
   any_scene_object(T x) : self_(std::make_shared(model_t<T>(std::move(x)))) {}
 
   friend std::optional<hit_record_t> hit(any_scene_object const &obj,
@@ -23,7 +23,7 @@ private:
     virtual std::optional<hit_record_t> hit(ray_t const &ray) const = 0;
   };
 
-  template <Hittable T> struct model_t final : concept_t {
+  template <SceneObject T> struct model_t final : concept_t {
     T hittable;
     model_t(T h_arg) : hittable(std::move(h_arg)){};
 
