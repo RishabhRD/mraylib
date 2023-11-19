@@ -104,4 +104,4 @@ void real() {
   mrl::write_ppm_img(std::cout, img);
 }
 
-int main() { debug(); }
+int main() { real(); }

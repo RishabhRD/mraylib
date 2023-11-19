@@ -12,8 +12,8 @@ private:
 public:
   ref_hook(Hook &h) : hook(&h) {}
 
-  void invoke_hit(ray_t const &ray,
-                  std::optional<hit_record_t> const &rec) const {
+  constexpr void invoke_hit(ray_t const &ray,
+                            std::optional<hit_record_t> const &rec) const {
     hook->invoke_hit(ray, rec);
   }
 };
