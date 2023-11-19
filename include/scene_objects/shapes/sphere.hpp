@@ -53,7 +53,7 @@ constexpr std::optional<hit_record_t> hit(sphere_obj_t const &obj,
   return t_opt.transform([&obj, &r](double t) {
     auto point = r.at(t);
     return hit_record_t{
-        .ray_t = t,
+        .t = t,
         .hit_point = point,
         .normal = calc_normal(obj, point),
     };

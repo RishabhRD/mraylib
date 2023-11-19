@@ -4,7 +4,7 @@
 #include "point.hpp"
 namespace mrl {
 struct hit_record_t {
-  double ray_t;
+  double t;
   point3 hit_point;
   direction_t normal;
 };

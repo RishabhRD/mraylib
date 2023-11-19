@@ -4,6 +4,8 @@
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
 #include "scene.hpp"
+#include "scene_objects/scene_object_list.hpp"
+#include "scene_objects/shapes/sphere.hpp"
 #include "tracer.hpp"
 #include "vector.hpp"
 #include "viewport.hpp"
@@ -22,7 +24,13 @@ int main() {
       .position = {0, 0, 0},
       .direction = mrl::vec3{0, 0, -1},
   };
+
+  mrl::scene_object_list<mrl::sphere_obj_t> world{
+      mrl::sphere_obj_t{.sphere{.radius = 0.5}, .center{0, 0, -1}},
+      mrl::sphere_obj_t{.sphere{.radius = 100}, .center{0, -100.5, -1}},
+  };
+
   mrl::in_memory_image img{scene.width, scene.height};
-  mrl::trace(camera, camera_orientation, scene, img);
+  mrl::trace(world, img, camera, camera_orientation);
   mrl::write_ppm_img(std::cout, img);
 }
