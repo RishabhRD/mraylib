@@ -5,6 +5,7 @@
 #include "scene_objects/concepts.hpp"
 #include <memory>
 #include <optional>
+
 namespace mrl {
 class any_scene_object {
 public:
