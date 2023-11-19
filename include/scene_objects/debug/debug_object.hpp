@@ -5,7 +5,7 @@
 namespace mrl {
 template <SceneObject Object, DebugHook Hook> struct debug_obj_t {
   Object object;
-  Hook hook;
+  mutable Hook hook;
 
   debug_obj_t(Object obj, Hook h)
       : object(std::move(obj)), hook(std::move(h)) {}
