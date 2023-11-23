@@ -4,6 +4,7 @@
 #include "hit_record.hpp"
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
+#include "image_renderer.hpp"
 #include "scene.hpp"
 #include "scene_objects/any_scene_object.hpp"
 #include "scene_objects/debug/debug_object.hpp"
@@ -12,7 +13,6 @@
 #include "scene_objects/debug/hooks/tagged_stream_hook.hpp"
 #include "scene_objects/scene_object_list.hpp"
 #include "scene_objects/shapes/sphere.hpp"
-#include "tracer.hpp"
 #include "vector.hpp"
 #include "viewport.hpp"
 #include <iostream>
@@ -69,7 +69,11 @@ void debug() {
   mrl::scene_object_list<mrl::any_scene_object> world{small, big};
 
   mrl::in_memory_image img{scene.width, scene.height};
-  mrl::trace(world, img, camera, camera_orientation);
+  mrl::img_renderer_t renderer{
+      .camera = camera,
+      .camera_orientation = camera_orientation,
+  };
+  renderer.render(world, img);
 
   std::cerr << "nil : " << hook.nil << '\n'
             << "neg : " << hook.neg << '\n'
@@ -100,7 +104,11 @@ void real() {
   mrl::scene_object_list<mrl::sphere_obj_t> world{small_sphere, big_sphere};
 
   mrl::in_memory_image img{scene.width, scene.height};
-  mrl::trace(world, img, camera, camera_orientation);
+  mrl::img_renderer_t renderer{
+      .camera = camera,
+      .camera_orientation = camera_orientation,
+  };
+  renderer.render(world, img);
   mrl::write_ppm_img(std::cout, img);
 }
 

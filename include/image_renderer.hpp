@@ -35,8 +35,9 @@ constexpr color_t ray_color(ray_t const &ray, Object const &world) {
 }
 
 template <SceneObject Object, RandomAccessImage Image>
-constexpr void trace(Object const &world, Image &img, camera_t const &camera,
-                     camera_orientation_t const &orientation) {
+constexpr void render_image(Object const &world, Image &img,
+                            camera_t const &camera,
+                            camera_orientation_t const &orientation) {
   auto [u_dir, v_dir] = viewport_direction(orientation);
   auto viewport_u = u_dir * camera.viewport.width;
   auto viewport_v = v_dir * camera.viewport.height;
@@ -55,10 +56,20 @@ constexpr void trace(Object const &world, Image &img, camera_t const &camera,
       auto camera_center = orientation.position;
       ray_t r{
           .origin = camera_center,
-          .direction = pixel_center - orientation.position,
+          .direction = pixel_center - camera_center,
       };
       img.at(j, i) = ray_color(r, world);
     }
   }
 }
+
+struct img_renderer_t {
+  camera_t camera;
+  camera_orientation_t camera_orientation;
+
+  template <SceneObject Object, RandomAccessImage Image>
+  void render(Object const &world, Image &img) const {
+    render_image(world, img, camera, camera_orientation);
+  }
+};
 } // namespace mrl
