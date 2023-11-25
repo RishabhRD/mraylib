@@ -5,14 +5,17 @@
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
 #include "image_renderer.hpp"
+#include "pixel_sampler/randomized_delta_sampler.hpp"
 #include "scene.hpp"
 #include "scene_objects/any_scene_object.hpp"
 #include "scene_objects/debug/debug_object.hpp"
 #include "scene_objects/debug/hooks/noop_hook.hpp"
 #include "scene_objects/debug/hooks/ref_hook.hpp"
 #include "scene_objects/debug/hooks/tagged_stream_hook.hpp"
-#include "scene_objects/scene_object_list.hpp"
+#include "scene_objects/scene_object_range.hpp"
 #include "scene_objects/shapes/sphere.hpp"
+#include "std/random_double_generator.hpp"
+#include "std/ranges.hpp"
 #include "vector.hpp"
 #include "viewport.hpp"
 #include <iostream>
@@ -66,13 +69,11 @@ void debug() {
       mrl::debug_obj_t{small_sphere, mrl::noop_hook{}};
   mrl::any_scene_object big = mrl::debug_obj_t{big_sphere, mrl::ref_hook{hook}};
 
-  mrl::scene_object_list<mrl::any_scene_object> world{small, big};
+  std::vector<mrl::any_scene_object> world{small, big};
 
   mrl::in_memory_image img{scene.width, scene.height};
-  mrl::img_renderer_t renderer{
-      .camera = camera,
-      .camera_orientation = camera_orientation,
-  };
+  mrl::img_renderer_t renderer(camera, camera_orientation,
+                               mrl::randomized_delta_sampler{5});
   renderer.render(world, img);
 
   std::cerr << "nil : " << hook.nil << '\n'
@@ -101,13 +102,11 @@ void real() {
   auto big_sphere =
       mrl::sphere_obj_t{.sphere{.radius = 100}, .center{0, -100.5, -1}};
 
-  mrl::scene_object_list<mrl::sphere_obj_t> world{small_sphere, big_sphere};
+  std::vector<mrl::sphere_obj_t> world{small_sphere, big_sphere};
 
   mrl::in_memory_image img{scene.width, scene.height};
-  mrl::img_renderer_t renderer{
-      .camera = camera,
-      .camera_orientation = camera_orientation,
-  };
+  mrl::img_renderer_t renderer(camera, camera_orientation,
+                               mrl::randomized_delta_sampler{100});
   renderer.render(world, img);
   mrl::write_ppm_img(std::cout, img);
 }

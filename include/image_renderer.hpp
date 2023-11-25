@@ -5,6 +5,7 @@
 #include "color.hpp"
 #include "direction.hpp"
 #include "image/concepts.hpp"
+#include "pixel_sampler/concepts.hpp"
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/shapes/sphere.hpp"
@@ -34,10 +35,31 @@ constexpr color_t ray_color(ray_t const &ray, Object const &world) {
   return (1.0 - a) * color_t{1.0, 1.0, 1.0} + a * color_t{0.0, 0.0, 0.0};
 }
 
-template <SceneObject Object, RandomAccessImage Image>
-constexpr void render_image(Object const &world, Image &img,
-                            camera_t const &camera,
-                            camera_orientation_t const &orientation) {
+// Precondition:
+//   - std::ranges::distance(rng) >= 1
+template <SceneObject Object, std::ranges::input_range VectorRange>
+  requires RangeValueType<VectorRange, vec3>
+constexpr color_t sampled_ray_color(vec3 const &camera_center,
+                                    VectorRange const &pixel_points,
+                                    Object const &world) {
+  double num_ele = 0.0;
+  color_t color{0, 0, 0};
+  for (vec3 const &pixel_center : pixel_points) {
+    ray_t r{
+        .origin = camera_center,
+        .direction = pixel_center - camera_center,
+    };
+    color += ray_color(r, world);
+    ++num_ele;
+  }
+  return color / num_ele;
+}
+
+template <SceneObject Object, RandomAccessImage Image, PixelSampler Sampler>
+constexpr void
+render_image(Object const &world, Image &img, camera_t const &camera,
+             camera_orientation_t const &orientation, Sampler &sampler) {
+
   auto [u_dir, v_dir] = viewport_direction(orientation);
   auto viewport_u = u_dir * camera.viewport.width;
   auto viewport_v = v_dir * camera.viewport.height;
@@ -53,23 +75,35 @@ constexpr void render_image(Object const &world, Image &img,
   for (int j = 0; j < img.height(); ++j) {
     for (int i = 0; i < img.width(); ++i) {
       auto pixel_center = pixel00_loc + i * pixel_delta_u + j * pixel_delta_v;
-      auto camera_center = orientation.position;
-      ray_t r{
-          .origin = camera_center,
-          .direction = pixel_center - camera_center,
-      };
-      img.at(j, i) = ray_color(r, world);
+      auto sampling_points = sampler.sample({
+          .point = pixel_center,
+          .pixel_delta_u = pixel_delta_u,
+          .pixel_delta_v = pixel_delta_v,
+      });
+      img.at(j, i) = sampled_ray_color(orientation.position,
+                                       std::move(sampling_points), world);
     }
   }
 }
 
-struct img_renderer_t {
+template <PixelSampler Sampler> struct img_renderer_t {
   camera_t camera;
   camera_orientation_t camera_orientation;
+  Sampler sampler;
+
+  img_renderer_t(camera_t camera_, camera_orientation_t camera_orientation_,
+                 Sampler sampler_)
+      : camera{std::move(camera_)},
+        camera_orientation{std::move(camera_orientation_)},
+        sampler{std::move(sampler_)} {}
 
   template <SceneObject Object, RandomAccessImage Image>
-  void render(Object const &world, Image &img) const {
-    render_image(world, img, camera, camera_orientation);
+  constexpr void render(Object const &world, Image &img) {
+    render_image(world, img, camera, camera_orientation, sampler);
   }
 };
+
+template <PixelSampler Sampler>
+img_renderer_t(camera_t, camera_orientation_t, Sampler)
+    -> img_renderer_t<Sampler>;
 } // namespace mrl

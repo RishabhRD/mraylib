@@ -4,35 +4,20 @@
 #include "pixel_sampler/concepts.hpp"
 #include "pixel_sampler/sampler_args.hpp"
 #include "point.hpp"
-#include "std/random_double_generator.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
 #include <concepts>
-#include <type_traits>
 
 namespace mrl {
-constexpr point3 make_sampling_pixel_point(sampler_args_t const &args,
+constexpr point3 make_sampling_pixel_point(vec3 const &pixel_delta_u,
+                                           vec3 const &pixel_delta_v,
+                                           point3 const &pixel_center,
                                            std::pair<double, double> delta) {
   delta.first -= 0.5;
   delta.second -= 0.5;
-  return args.point + (delta.first * args.pixel_delta_u) +
-         (delta.second * args.pixel_delta_v);
+  return pixel_center + (delta.first * pixel_delta_u) +
+         (delta.second * pixel_delta_v);
 }
-// Precondition:
-//   - sample_size >= 1
-// template <typename DeltaRange>
-// requires RangeValueType<DeltaRange, double>
-// constexpr auto make_sampling_pixel_points(int sample_size, DeltaRange
-// &deltas,
-//                                           sampler_args_t const &args) {
-//   namespace vw = std::views;
-//   auto pnt_sampling_fn = std::bind_front(
-//       lift(make_sampling_pixel_point), args.pixel_delta_u,
-//       args.pixel_delta_v);
-//   return vw::repeat(args.point)                                          //
-//          | vw::zip_transform(views::chunk_pair(deltas), pnt_sampling_fn) //
-//          | vw::take(sample_size);
-// }
 
 // Precondition:
 //   - sample_size >= 1
@@ -40,16 +25,12 @@ template <typename DeltaRange>
   requires RangeValueType<DeltaRange, double>
 constexpr auto make_sampling_pixel_points(int sample_size, DeltaRange &deltas,
                                           sampler_args_t const &args) {
-  std::vector<point3> res;
-  auto delta_cur = std::ranges::begin(deltas);
-  for (int i = 0; i < sample_size; ++i) {
-    auto first = *delta_cur;
-    ++delta_cur;
-    auto second = *delta_cur;
-    ++delta_cur;
-    res.push_back(make_sampling_pixel_point(args, {first, second}));
-  }
-  return res;
+  namespace vw = std::views;
+  auto pnt_sampling_fn = std::bind_front(
+      lift(make_sampling_pixel_point), args.pixel_delta_u, args.pixel_delta_v);
+  return vw::zip_transform(pnt_sampling_fn, vw::repeat(args.point),
+                           views::chunk_pair(deltas)) //
+         | vw::take(sample_size);
 }
 
 template <std::invocable DeltaGenerator>

@@ -1,4 +1,4 @@
-find_program(CLANGTIDY clang-tidy-16)
+find_program(CLANGTIDY clang-tidy-17)
 if(CLANGTIDY)
   set(CMAKE_CXX_CLANG_TIDY ${CLANGTIDY} -extra-arg=-Wno-unknown-warning-option)
 else()

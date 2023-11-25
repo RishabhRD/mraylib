@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(mraylib CXX)
 include(cmake/StandardProjectSettings.cmake)
-include(cmake/StaticAnalyzers.cmake)
+# include(cmake/StaticAnalyzers.cmake)
 include(cmake/CompilerWarnings.cmake)
 include(package.cmake)
 

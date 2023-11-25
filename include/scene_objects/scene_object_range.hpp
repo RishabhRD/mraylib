@@ -4,19 +4,17 @@
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
 #include <algorithm>
+#include <bits/ranges_base.h>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <ranges>
-#include <vector>
 
 namespace mrl {
-template <SceneObject T, typename Allocator = std::allocator<T>>
-using scene_object_list = std::vector<T, Allocator>;
-
-template <SceneObject T, typename Allocator>
-constexpr std::optional<hit_record_t>
-hit(scene_object_list<T, Allocator> const &obj, ray_t const &ray) {
+template <std::ranges::input_range SceneObjectRange>
+  requires SceneObject<std::ranges::range_value_t<SceneObjectRange>>
+constexpr std::optional<hit_record_t> hit(SceneObjectRange const &obj,
+                                          ray_t const &ray) {
   namespace rv = std::views;
   auto hit_results =
       obj                                                            //
