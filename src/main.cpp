@@ -5,6 +5,8 @@
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
 #include "image_renderer.hpp"
+#include "materials/concept.hpp"
+#include "materials/lambertian_material.hpp"
 #include "pixel_sampler/randomized_delta_sampler.hpp"
 #include "scene.hpp"
 #include "scene_objects/any_scene_object.hpp"
@@ -58,10 +60,10 @@ void debug() {
       .direction = mrl::vec3{0, 0, -1},
   };
 
-  auto small_sphere =
-      mrl::sphere_obj_t{.sphere{.radius = 0.5}, .center{0, 0, -1}};
-  auto big_sphere =
-      mrl::sphere_obj_t{.sphere{.radius = 100}, .center{0, -100.5, -1}};
+  auto material = mrl::lambertian_material_t{mrl::color_t{0.5, 0.5, 0.5}};
+
+  auto small_sphere = mrl::sphere_obj_t{0.5, {0, 0, -1}, material};
+  auto big_sphere = mrl::sphere_obj_t{100, {0, -100.5, -1}, material};
 
   count_hook hook{};
 
@@ -72,7 +74,7 @@ void debug() {
   std::vector<mrl::any_scene_object> world{small, big};
 
   mrl::in_memory_image img{scene.width, scene.height};
-  mrl::img_renderer_t renderer(camera, camera_orientation,
+  mrl::img_renderer_t renderer(camera, camera_orientation, 10,
                                mrl::randomized_delta_sampler{5});
   renderer.render(world, img);
 
@@ -97,15 +99,16 @@ void real() {
       .direction = mrl::vec3{0, 0, -1},
   };
 
-  auto small_sphere =
-      mrl::sphere_obj_t{.sphere{.radius = 0.5}, .center{0, 0, -1}};
-  auto big_sphere =
-      mrl::sphere_obj_t{.sphere{.radius = 100}, .center{0, -100.5, -1}};
+  auto ground_material =
+      mrl::lambertian_material_t{mrl::color_t{0.4, 0.8, 0.4}};
+  auto ball_material = mrl::lambertian_material_t{mrl::color_t{0.6, 0.4, 0.8}};
+  auto small_sphere = mrl::sphere_obj_t{0.5, {0, 0, -1}, ball_material};
+  auto big_sphere = mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
 
-  std::vector<mrl::sphere_obj_t> world{small_sphere, big_sphere};
+  std::vector world{small_sphere, big_sphere};
 
   mrl::in_memory_image img{scene.width, scene.height};
-  mrl::img_renderer_t renderer(camera, camera_orientation,
+  mrl::img_renderer_t renderer(camera, camera_orientation, 10,
                                mrl::randomized_delta_sampler{100});
   renderer.render(world, img);
   mrl::write_ppm_img(std::cout, img);

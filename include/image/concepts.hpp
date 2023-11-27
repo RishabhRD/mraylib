@@ -1,22 +1,16 @@
 #pragma once
 
 #include "color.hpp"
-#include <concepts>
-#include <type_traits>
 namespace mrl {
 
 template <typename Image>
-concept RandomAccessImage = requires(Image &x, Image const &y) {
-  { x.at(std::declval<int>(), std::declval<int>()) } -> std::same_as<color_t &>;
-
-  {
-    y.at(std::declval<int>(), std::declval<int>())
-  } -> std::same_as<color_t const &>;
-
-  { x.width() } -> std::same_as<int>;
-  { x.height() } -> std::same_as<int>;
-  { y.width() } -> std::same_as<int>;
-  { y.height() } -> std::same_as<int>;
-};
-
+concept RandomAccessImage =
+    requires(Image &img1, Image const &img2, int x, int y) {
+      { img1.at(x, y) } -> std::same_as<color_t &>;
+      { img1.width() } -> std::same_as<int>;
+      { img1.height() } -> std::same_as<int>;
+      { img2.at(x, y) } -> std::same_as<color_t const &>;
+      { img2.width() } -> std::same_as<int>;
+      { img2.height() } -> std::same_as<int>;
+    };
 }

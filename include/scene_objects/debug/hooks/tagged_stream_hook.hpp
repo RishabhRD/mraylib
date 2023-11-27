@@ -1,11 +1,10 @@
 #pragma once
 
-#include "../../../concepts.hpp"
 #include "hit_record.hpp"
-#include "optional_utils.hpp"
 #include "ray.hpp"
+#include "std/concepts.hpp"
+#include "std/optional.hpp"
 #include <optional>
-#include <ostream>
 
 namespace mrl {
 template <Streamable T> class tagged_stream_hook {

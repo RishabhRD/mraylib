@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <bits/ranges_base.h>
 #include <functional>
-#include <memory>
 #include <optional>
 #include <ranges>
 

@@ -85,4 +85,9 @@ constexpr vec3 cross(vec3 const &a, vec3 const &b) {
 constexpr vec3 unit_vector(vec3 const &v) { return v / v.length(); }
 
 constexpr vec3 normalize(vec3 const &v) { return unit_vector(v); }
+
+constexpr bool near_zero(vec3 const &v) {
+  constexpr static auto s = 1e-8;
+  return std::fabs(v.x) < s && std::fabs(v.y) < s && std::fabs(v.z) < s;
+}
 } // namespace mrl

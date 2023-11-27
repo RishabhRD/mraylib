@@ -5,7 +5,7 @@
 #include <sstream>
 namespace mrl {
 inline auto write_ppm_color_str(std::ostream &os, color_t color) {
-  auto [r, g, b] = to_rgb(color);
+  auto [r, g, b] = to_rgb_gamma(color);
   os << r << ' ' << g << ' ' << b << '\n';
 }
 

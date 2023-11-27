@@ -2,6 +2,7 @@
 
 #include "direction.hpp"
 #include "vector.hpp"
+#include <cmath>
 #include <ostream>
 #include <tuple>
 namespace mrl {
@@ -83,6 +84,14 @@ constexpr std::tuple<int, int, int> to_rgb(color_t color) {
       static_cast<int>(255.999 * color.r),
       static_cast<int>(255.999 * color.g),
       static_cast<int>(255.999 * color.b),
+  };
+}
+
+constexpr std::tuple<int, int, int> to_rgb_gamma(color_t color) {
+  return {
+      static_cast<int>(255.999 * std::sqrt(color.r)),
+      static_cast<int>(255.999 * std::sqrt(color.g)),
+      static_cast<int>(255.999 * std::sqrt(color.b)),
   };
 }
 } // namespace mrl

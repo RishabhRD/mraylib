@@ -6,7 +6,7 @@
 
 template <mrl::Streamable T>
 std::ostream &operator<<(std::ostream &os, std::optional<T> const &opt) {
-  if (opt) {
+  if (!opt.has_value()) {
     os << "nullopt";
   } else {
     os << *opt;
