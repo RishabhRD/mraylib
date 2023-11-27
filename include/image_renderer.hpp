@@ -5,12 +5,14 @@
 #include "color.hpp"
 #include "direction.hpp"
 #include "image/concepts.hpp"
+#include "interval.hpp"
 #include "pixel_sampler/concepts.hpp"
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "vector.hpp"
 #include "viewport_utils.hpp"
+#include <limits>
 
 namespace mrl {
 
@@ -18,7 +20,10 @@ template <SceneObject Object>
 constexpr color_t ray_color(ray_t const &ray, Object const &world, int depth) {
   if (depth <= 0)
     return {0, 0, 0};
-  auto hit_record = hit(world, ray);
+  constexpr static double closeness_limit = 0.001;
+  auto hit_record =
+      hit(world, ray,
+          interval_t{closeness_limit, std::numeric_limits<double>::infinity()});
   if (hit_record) {
     auto scattering = hit_record->scattering;
     if (!scattering.has_value())

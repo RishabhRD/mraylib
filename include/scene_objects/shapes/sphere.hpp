@@ -2,6 +2,7 @@
 
 #include "direction.hpp"
 #include "hit_record.hpp"
+#include "interval.hpp"
 #include "materials/concept.hpp"
 #include "point.hpp"
 #include "ray.hpp"
@@ -31,7 +32,8 @@ sphere_obj_t(double, point3, material_t) -> sphere_obj_t<material_t>;
 //   - Returns the least possible t if any
 template <Material material_t>
 constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
-                                      ray_t const &r) {
+                                      ray_t const &r,
+                                      interval_t const &t_range) {
   auto oc = r.origin - obj.center;
   auto a = r.direction.val().length_square();
   auto half_b = dot(oc, r.direction.val());
@@ -40,10 +42,10 @@ constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
   auto discriminant_sqrt = std::sqrt(discriminant);
   if (discriminant >= 0) {
     auto t1 = (-half_b - discriminant_sqrt) / a;
-    if (t1 >= 0)
+    if (t_range.surrounds(t1))
       return t1;
     auto t2 = (-half_b + discriminant_sqrt) / a;
-    if (t2 >= 0)
+    if (t_range.surrounds(t2))
       return t2;
   }
   return std::nullopt;
@@ -60,8 +62,9 @@ constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
 //   - t should be the minimum possible value for which ray intersects object
 template <Material material_t>
 constexpr std::optional<hit_record_t> hit(sphere_obj_t<material_t> const &obj,
-                                          ray_t const &r) {
-  auto t_opt = hit_t(obj, r);
+                                          ray_t const &r,
+                                          interval_t const &interval) {
+  auto t_opt = hit_t(obj, r, interval);
   return t_opt.transform([&obj, &r](double t) {
     auto point = r.at(t);
     auto normal = calc_normal(obj, point);
