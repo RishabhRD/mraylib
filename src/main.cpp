@@ -7,7 +7,7 @@
 #include "image_renderer.hpp"
 #include "materials/concept.hpp"
 #include "materials/lambertian.hpp"
-#include "materials/metal_material.hpp"
+#include "materials/metal.hpp"
 #include "pixel_sampler/randomized_delta_sampler.hpp"
 #include "scene.hpp"
 #include "scene_objects/any_scene_object.hpp"
@@ -89,7 +89,7 @@ void debug() {
 void real() {
   mrl::aspect_ratio_t ratio{16, 9};
   auto scene = mrl::make_scene(ratio, 600);
-  auto viewport = mrl::make_viewport(scene, 3.0);
+  auto viewport = mrl::make_viewport(scene, 2.0);
   mrl::camera_t camera{
       .viewport = viewport,
       .focal_length = 1.0,
@@ -102,7 +102,7 @@ void real() {
 
   auto ground_material = mrl::lambertian_t{mrl::color_t{0.3, 0.3, 0.3}};
   auto left_material = mrl::metal_t{mrl::color_t{0.3, 0.3, 0.7}};
-  auto right_material = mrl::metal_t{mrl::color_t{0.3, 0.3, 0.3}};
+  auto right_material = mrl::fuzzy_metal_t{mrl::color_t{0.3, 0.3, 0.3}, 0.4};
   auto center_material = mrl::lambertian_t{mrl::color_t{0.6, 0.6, 0.3}};
   mrl::any_scene_object center_sphere =
       mrl::sphere_obj_t{0.5, {0, 0, -1}, center_material};
