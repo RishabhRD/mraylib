@@ -12,6 +12,8 @@ template <typename T>
 concept MaterialNonConst =
     requires(T &material, ray_t const &ray, point3 const &hit_point,
              vec3 const &normal) {
+      // Precondition:
+      //   - normal is st dot(normal, ray.dir) <= 0
       {
         scatter(material, ray, hit_point, normal)
       } -> std::same_as<std::optional<scatter_record_t>>;
@@ -20,11 +22,16 @@ concept MaterialNonConst =
 template <typename T>
 concept MaterialConst = requires(T &material, ray_t const &ray,
                                  point3 const &hit_point, vec3 const &normal) {
+  // Precondition:
+  //   - normal is st dot(normal, ray.dir) <= 0
   {
     scatter(material, ray, hit_point, normal)
   } -> std::same_as<std::optional<scatter_record_t>>;
 };
 } // namespace __details
+
+// Precondition:
+//   - normal is st dot(normal, ray.dir) <= 0
 template <typename T>
 concept Material =
     __details::MaterialNonConst<T> || __details::MaterialConst<T>;

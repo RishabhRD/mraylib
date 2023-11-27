@@ -7,6 +7,7 @@
 #include "image_renderer.hpp"
 #include "materials/concept.hpp"
 #include "materials/lambertian.hpp"
+#include "materials/metal_material.hpp"
 #include "pixel_sampler/randomized_delta_sampler.hpp"
 #include "scene.hpp"
 #include "scene_objects/any_scene_object.hpp"
@@ -88,7 +89,7 @@ void debug() {
 void real() {
   mrl::aspect_ratio_t ratio{16, 9};
   auto scene = mrl::make_scene(ratio, 600);
-  auto viewport = mrl::make_viewport(scene, 2.0);
+  auto viewport = mrl::make_viewport(scene, 3.0);
   mrl::camera_t camera{
       .viewport = viewport,
       .focal_length = 1.0,
@@ -100,11 +101,19 @@ void real() {
   };
 
   auto ground_material = mrl::lambertian_t{mrl::color_t{0.3, 0.3, 0.3}};
-  auto ball_material = mrl::lambertian_t{mrl::color_t{0.3, 0.3, 0.3}};
-  auto small_sphere = mrl::sphere_obj_t{0.5, {0, 0, -1}, ball_material};
-  auto big_sphere = mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
+  auto left_material = mrl::metal_t{mrl::color_t{0.3, 0.3, 0.7}};
+  auto right_material = mrl::metal_t{mrl::color_t{0.3, 0.3, 0.3}};
+  auto center_material = mrl::lambertian_t{mrl::color_t{0.6, 0.6, 0.3}};
+  mrl::any_scene_object center_sphere =
+      mrl::sphere_obj_t{0.5, {0, 0, -1}, center_material};
+  mrl::any_scene_object left_sphere =
+      mrl::sphere_obj_t{0.5, {-1, 0, -1}, left_material};
+  mrl::any_scene_object right_sphere =
+      mrl::sphere_obj_t{0.5, {1, 0, -1}, right_material};
+  mrl::any_scene_object big_sphere =
+      mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
 
-  std::vector world{small_sphere, big_sphere};
+  std::vector world{center_sphere, big_sphere, right_sphere, left_sphere};
 
   mrl::in_memory_image img{scene.width, scene.height};
   mrl::img_renderer_t renderer(camera, camera_orientation, 50,
