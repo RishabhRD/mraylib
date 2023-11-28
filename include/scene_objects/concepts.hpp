@@ -13,7 +13,8 @@ concept Hittable =
       //   - If ray doesn't intersect then return nullopt
       //   - t should be the minimum possible value for which ray intersects
       //   object
-      //   - normal direction shoule be st dot(normal, ray.dir) <= 0
+      //   - normal should be perpendicular to the hit point
+      //   - normal should always point outside of object
       { hit(obj, ray, interval) } -> std::same_as<std::optional<hit_record_t>>;
     };
 

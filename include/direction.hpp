@@ -45,4 +45,8 @@ public:
     return dir;
   }
 };
+
+constexpr direction_t opposite(direction_t dir) {
+  return dir_from_unit(-dir.val());
+}
 } // namespace mrl

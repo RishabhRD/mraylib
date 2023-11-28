@@ -100,10 +100,13 @@ void real() {
       .direction = mrl::vec3{0, 0, -1},
   };
 
+  auto sun_material = mrl::lambertian_t{mrl::color_t{1, 1, 0.0}};
   auto ground_material = mrl::lambertian_t{mrl::color_t{0.3, 0.3, 0.3}};
   auto left_material = mrl::metal_t{mrl::color_t{0.3, 0.3, 0.7}};
-  auto right_material = mrl::fuzzy_metal_t{mrl::color_t{0.3, 0.3, 0.3}, 0.4};
+  auto right_material = mrl::fuzzy_metal_t{mrl::color_t{0.3, 0.3, 0.3}, 0.2};
   auto center_material = mrl::lambertian_t{mrl::color_t{0.6, 0.6, 0.3}};
+  mrl::any_scene_object sun =
+      mrl::sphere_obj_t{0.1, {1, 1, -1.3}, sun_material};
   mrl::any_scene_object center_sphere =
       mrl::sphere_obj_t{0.5, {0, 0, -1}, center_material};
   mrl::any_scene_object left_sphere =
@@ -113,7 +116,7 @@ void real() {
   mrl::any_scene_object big_sphere =
       mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
 
-  std::vector world{center_sphere, big_sphere, right_sphere, left_sphere};
+  std::vector world{center_sphere, big_sphere, right_sphere, left_sphere, sun};
 
   mrl::in_memory_image img{scene.width, scene.height};
   mrl::img_renderer_t renderer(camera, camera_orientation, 50,

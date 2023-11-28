@@ -3,6 +3,7 @@
 #include "color.hpp"
 #include "direction.hpp"
 #include "materials/scatter_record.hpp"
+#include "normal.hpp"
 #include "point.hpp"
 #include "random/random_vector.hpp"
 #include "ray.hpp"
@@ -25,11 +26,11 @@ struct basic_lambertian_t {
 
 using lambertian_t = basic_lambertian_t<>;
 
-// Precondition:
-//   - normal is st dot(normal, ray.dir) <= 0
 constexpr std::optional<scatter_record_t>
-lambertian_scatter(color_t const &material_color, point3 hit_point,
-                   direction_t const &normal, direction_t const &random_dir) {
+lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
+                   point3 hit_point, direction_t normal,
+                   direction_t const &random_dir) {
+  normal = normal_dir(normal, in_ray.direction);
   auto scatter_dir = normal.val() + random_dir.val();
   if (near_zero(scatter_dir))
     scatter_dir = normal.val();
@@ -44,14 +45,12 @@ lambertian_scatter(color_t const &material_color, point3 hit_point,
   };
 }
 
-// Precondition:
-//   - normal is st dot(normal, ray.dir) <= 0
 template <std::invocable DirectionGenerator>
   requires std::same_as<std::invoke_result_t<DirectionGenerator>, direction_t>
 constexpr auto scatter(basic_lambertian_t<DirectionGenerator> const &material,
-                       ray_t const &, point3 const &hit_point,
+                       ray_t const &in_ray, point3 const &hit_point,
                        direction_t const &normal) {
-  return lambertian_scatter(material.albedo, hit_point, normal,
+  return lambertian_scatter(material.albedo, in_ray, hit_point, normal,
                             std::invoke(material.gen_dir));
 }
 

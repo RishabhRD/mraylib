@@ -4,6 +4,7 @@
 #include "direction.hpp"
 #include "light.hpp"
 #include "materials/scatter_record.hpp"
+#include "normal.hpp"
 #include "random/random_vector.hpp"
 #include "ray.hpp"
 #include "vector.hpp"
@@ -14,12 +15,11 @@ struct metal_t {
   color_t albedo;
 };
 
-// Precondition:
-//   - normal is st dot(normal, ray.dir) <= 0
 constexpr std::optional<scatter_record_t> scatter(metal_t const &material,
                                                   ray_t const &in_ray,
                                                   point3 const &hit_point,
                                                   direction_t normal) {
+  normal = normal_dir(normal, in_ray.direction);
   auto ray_dir = reflection_dir(in_ray.direction, normal);
   ray_t scattered_ray{.origin = hit_point, .direction = ray_dir};
   return scatter_record_t{
@@ -46,13 +46,12 @@ public:
 
 using fuzzy_metal_t = basic_fuzzy_metal_t<>;
 
-// Precondition:
-//   - normal is st dot(normal, ray.dir) <= 0
 template <std::invocable DirectionGenerator>
   requires std::same_as<std::invoke_result_t<DirectionGenerator>, direction_t>
 constexpr std::optional<scatter_record_t>
 scatter(basic_fuzzy_metal_t<DirectionGenerator> const &material,
         ray_t const &in_ray, point3 const &hit_point, direction_t normal) {
+  normal = normal_dir(normal, in_ray.direction);
   auto ray_dir = reflection_dir(in_ray.direction, normal);
   ray_t scattered_ray{.origin = hit_point,
                       .direction = ray_dir.val() +

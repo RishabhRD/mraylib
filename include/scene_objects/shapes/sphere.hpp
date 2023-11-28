@@ -4,7 +4,6 @@
 #include "hit_record.hpp"
 #include "interval.hpp"
 #include "materials/concept.hpp"
-#include "normal.hpp"
 #include "point.hpp"
 #include "ray.hpp"
 #include "vector.hpp"
@@ -61,7 +60,8 @@ constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
 // Postcondition:
 //   - If ray doesn't intersect then return nullopt
 //   - t should be the minimum possible value for which ray intersects object
-//   - normal is st dot(normal, ray.dir) <= 0
+//   - normal is perpendicular to hit point
+//   - normal should always point outside of object
 template <Material material_t>
 constexpr std::optional<hit_record_t> hit(sphere_obj_t<material_t> const &obj,
                                           ray_t const &r,
@@ -69,7 +69,7 @@ constexpr std::optional<hit_record_t> hit(sphere_obj_t<material_t> const &obj,
   auto t_opt = hit_t(obj, r, interval);
   return t_opt.transform([&obj, &r](double t) {
     auto point = r.at(t);
-    auto normal = normal_dir(calc_normal(obj, point), r.direction);
+    auto normal = calc_normal(obj, point);
     return hit_record_t{
         .t = t,
         .hit_point = point,
