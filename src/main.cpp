@@ -6,6 +6,7 @@
 #include "image/ppm/ppm_utils.hpp"
 #include "image_renderer.hpp"
 #include "materials/concept.hpp"
+#include "materials/dielectric.hpp"
 #include "materials/lambertian.hpp"
 #include "materials/metal.hpp"
 #include "pixel_sampler/randomized_delta_sampler.hpp"
@@ -16,6 +17,7 @@
 #include "scene_objects/debug/hooks/ref_hook.hpp"
 #include "scene_objects/debug/hooks/tagged_stream_hook.hpp"
 #include "scene_objects/scene_object_range.hpp"
+#include "scene_objects/shapes/bubble.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "std/random_double_generator.hpp"
 #include "std/ranges.hpp"
@@ -97,26 +99,23 @@ void real() {
 
   mrl::camera_orientation_t camera_orientation{
       .position = {0, 0, 0},
-      .direction = mrl::vec3{0, 0, -1},
+      .direction = mrl::vec3{0.0, 0, -1},
   };
 
   auto sun_material = mrl::lambertian_t{mrl::color_t{1, 1, 0.0}};
   auto ground_material = mrl::lambertian_t{mrl::color_t{0.3, 0.3, 0.3}};
-  auto left_material = mrl::metal_t{mrl::color_t{0.3, 0.3, 0.7}};
+  auto left_material = mrl::dielectric{2};
   auto right_material = mrl::fuzzy_metal_t{mrl::color_t{0.3, 0.3, 0.3}, 0.2};
   auto center_material = mrl::lambertian_t{mrl::color_t{0.6, 0.6, 0.3}};
-  mrl::any_scene_object sun =
-      mrl::sphere_obj_t{0.1, {1, 1, -1.3}, sun_material};
-  mrl::any_scene_object center_sphere =
-      mrl::sphere_obj_t{0.5, {0, 0, -1}, center_material};
-  mrl::any_scene_object left_sphere =
-      mrl::sphere_obj_t{0.5, {-1, 0, -1}, left_material};
-  mrl::any_scene_object right_sphere =
-      mrl::sphere_obj_t{0.5, {1, 0, -1}, right_material};
-  mrl::any_scene_object big_sphere =
-      mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
+  auto sun = mrl::sphere_obj_t{0.1, {1, 1, -1.3}, sun_material};
+  auto center_sphere = mrl::sphere_obj_t{0.5, {0, 0, -1}, center_material};
+  auto left_sphere = mrl::sphere_obj_t{0.5, {-1, 0, -1}, left_material};
+  auto left_sphere_1 = mrl::bubble_obj_t{0.3, {-1, 0, -1}, left_material};
+  auto right_sphere = mrl::sphere_obj_t{0.5, {1, 0, -1}, right_material};
+  auto big_sphere = mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
 
-  std::vector world{center_sphere, big_sphere, right_sphere, left_sphere, sun};
+  std::vector<mrl::any_scene_object> world{
+      center_sphere, big_sphere, right_sphere, left_sphere, sun, left_sphere_1};
 
   mrl::in_memory_image img{scene.width, scene.height};
   mrl::img_renderer_t renderer(camera, camera_orientation, 50,

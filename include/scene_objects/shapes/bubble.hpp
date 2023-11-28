@@ -10,28 +10,24 @@
 #include <cmath>
 #include <optional>
 
+// WARN: This is an experimental class and not ready to use
 namespace mrl {
-// TODO: I don't know... this is required or not
-// struct sphere_t {
-//   double radius;
-// };
-
-template <Material material_t> struct sphere_obj_t {
+template <Material material_t> struct bubble_obj_t {
   double radius;
   point3 center;
   material_t material;
 
-  constexpr sphere_obj_t(double radius_, point3 center_, material_t material_)
+  constexpr bubble_obj_t(double radius_, point3 center_, material_t material_)
       : radius(radius_), center(center_), material(std::move(material_)) {}
 };
 
 template <Material material_t>
-sphere_obj_t(double, point3, material_t) -> sphere_obj_t<material_t>;
+bubble_obj_t(double, point3, material_t) -> bubble_obj_t<material_t>;
 
 // Postcondition:
 //   - Returns the least possible t if any
 template <Material material_t>
-constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
+constexpr std::optional<double> hit_t(bubble_obj_t<material_t> const &obj,
                                       ray_t const &r,
                                       interval_t const &t_range) {
   auto oc = r.origin - obj.center;
@@ -52,9 +48,9 @@ constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
 }
 
 template <Material material_t>
-constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
+constexpr direction_t calc_normal(bubble_obj_t<material_t> const &obj,
                                   point3 const &p) {
-  return p - obj.center;
+  return obj.center - p;
 }
 
 // Postcondition:
@@ -63,7 +59,7 @@ constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
 //   - normal is perpendicular to hit point
 //   - normal should always point outside of object
 template <Material material_t>
-constexpr std::optional<hit_record_t> hit(sphere_obj_t<material_t> const &obj,
+constexpr std::optional<hit_record_t> hit(bubble_obj_t<material_t> const &obj,
                                           ray_t const &r,
                                           interval_t const &interval) {
   auto t_opt = hit_t(obj, r, interval);
