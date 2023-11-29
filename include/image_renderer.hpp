@@ -1,7 +1,7 @@
 #pragma once
 
-#include "camera.hpp"
-#include "camera_orientation.hpp"
+#include "camera/camera_orientation.hpp"
+#include "camera/concepts.hpp"
 #include "color.hpp"
 #include "direction.hpp"
 #include "image/concepts.hpp"
@@ -11,10 +11,26 @@
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "vector.hpp"
-#include "viewport_utils.hpp"
+#include <cmath>
 #include <limits>
 
 namespace mrl {
+
+constexpr std::pair<vec3, vec3>
+viewport_direction(camera_orientation_t const &o) {
+  auto normal = o.direction.val();
+  auto upward_dir = (normal == vec3{0, 1, 0} || normal == vec3{0, -1, 0})
+                        ? vec3{0, 0, 1}
+                        : vec3{0, 1, 0};
+  auto right = normalize(cross(o.direction.val(), upward_dir));
+  auto up = normalize(cross(right, o.direction.val()));
+  return {right, -up};
+}
+
+constexpr vec3 viewport_topleft(vec3 right, vec3 down,
+                                camera_orientation_t const &o, double f) {
+  return o.position + o.direction.val() * f - right / 2 - down / 2;
+}
 
 template <SceneObject Object>
 constexpr color_t ray_color(ray_t const &ray, Object const &world, int depth) {
@@ -57,40 +73,46 @@ constexpr color_t sampled_ray_color(vec3 const &camera_center,
   return color / num_ele;
 }
 
-template <SceneObject Object, RandomAccessImage Image, PixelSampler Sampler>
+template <Camera camera_t, SceneObject Object, RandomAccessImage Image,
+          PixelSampler Sampler>
 constexpr void render_image(Object const &world, Image &img,
                             camera_t const &camera,
                             camera_orientation_t const &orientation,
                             Sampler &sampler, int rendering_depth) {
 
+  auto h = std::tan(vertical_fov(camera).radians);
+  auto viewport_height = 2 * h * focal_length(camera);
+  auto viewport_width =
+      viewport_height * (static_cast<double>(width(img)) / height(img));
   auto [u_dir, v_dir] = viewport_direction(orientation);
-  auto viewport_u = u_dir * camera.viewport.width;
-  auto viewport_v = v_dir * camera.viewport.height;
+  auto viewport_u = u_dir * viewport_width;
+  auto viewport_v = v_dir * viewport_height;
 
-  auto pixel_delta_u = viewport_u / img.width();
-  auto pixel_delta_v = viewport_v / img.height();
+  auto pixel_delta_u = viewport_u / width(img);
+  auto pixel_delta_v = viewport_v / height(img);
 
   auto viewport_top_left = viewport_topleft(viewport_u, viewport_v, orientation,
-                                            camera.focal_length);
+                                            focal_length(camera));
 
   auto pixel00_loc = viewport_top_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-  for (int j = 0; j < img.height(); ++j) {
-    for (int i = 0; i < img.width(); ++i) {
+  for (int j = 0; j < height(img); ++j) {
+    for (int i = 0; i < width(img); ++i) {
       auto pixel_center = pixel00_loc + i * pixel_delta_u + j * pixel_delta_v;
       auto sampling_points = sampler.sample({
           .point = pixel_center,
           .pixel_delta_u = pixel_delta_u,
           .pixel_delta_v = pixel_delta_v,
       });
-      img.at(j, i) =
+      color_t pixel_color =
           sampled_ray_color(orientation.position, std::move(sampling_points),
                             world, rendering_depth);
+      set_pixel_at(img, j, i, pixel_color);
     }
   }
 }
 
-template <PixelSampler Sampler> struct img_renderer_t {
+template <Camera camera_t, PixelSampler Sampler> struct img_renderer_t {
   camera_t camera;
   camera_orientation_t camera_orientation;
   int rendering_depth;
@@ -109,7 +131,7 @@ template <PixelSampler Sampler> struct img_renderer_t {
   }
 };
 
-template <PixelSampler Sampler>
+template <Camera camera_t, PixelSampler Sampler>
 img_renderer_t(camera_t, camera_orientation_t, Sampler)
-    -> img_renderer_t<Sampler>;
+    -> img_renderer_t<camera_t, Sampler>;
 } // namespace mrl

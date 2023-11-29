@@ -27,4 +27,13 @@ public:
 
   constexpr int height() const { return height_; }
 };
+
+constexpr auto width(in_memory_image const &img) { return img.width(); }
+constexpr auto height(in_memory_image const &img) { return img.height(); }
+constexpr auto pixel_at(in_memory_image const &img, int x, int y) {
+  return img.at(x, y);
+}
+constexpr auto set_pixel_at(in_memory_image &img, int x, int y, color_t color) {
+  img.at(x, y) = color;
+}
 } // namespace mrl

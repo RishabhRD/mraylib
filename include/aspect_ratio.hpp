@@ -22,4 +22,8 @@ public:
 
   constexpr double val() const { return double(width_) / height_; }
 };
+
+constexpr auto image_height(aspect_ratio_t ratio, int img_width) {
+  return static_cast<int>(img_width / ratio.val());
+}
 } // namespace mrl

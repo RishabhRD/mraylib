@@ -1,6 +1,7 @@
+#include "angle.hpp"
 #include "aspect_ratio.hpp"
-#include "camera.hpp"
-#include "camera_orientation.hpp"
+#include "camera/camera.hpp"
+#include "camera/camera_orientation.hpp"
 #include "hit_record.hpp"
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
@@ -10,7 +11,6 @@
 #include "materials/lambertian.hpp"
 #include "materials/metal.hpp"
 #include "pixel_sampler/randomized_delta_sampler.hpp"
-#include "scene.hpp"
 #include "scene_objects/any_scene_object.hpp"
 #include "scene_objects/debug/debug_object.hpp"
 #include "scene_objects/debug/hooks/noop_hook.hpp"
@@ -22,7 +22,6 @@
 #include "std/random_double_generator.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
-#include "viewport.hpp"
 #include <iostream>
 
 struct count_hook {
@@ -51,11 +50,11 @@ struct count_hook {
 
 void debug() {
   mrl::aspect_ratio_t ratio{16, 9};
-  auto scene = mrl::make_scene(ratio, 600);
-  auto viewport = mrl::make_viewport(scene, 2.0);
+  auto img_width = 600;
+  auto img_height = mrl::image_height(ratio, img_width);
   mrl::camera_t camera{
-      .viewport = viewport,
       .focal_length = 1.0,
+      .vertical_fov = mrl::degrees(90),
   };
 
   mrl::camera_orientation_t camera_orientation{
@@ -76,7 +75,7 @@ void debug() {
 
   std::vector<mrl::any_scene_object> world{small, big};
 
-  mrl::in_memory_image img{scene.width, scene.height};
+  mrl::in_memory_image img{img_width, img_height};
   mrl::img_renderer_t renderer(camera, camera_orientation, 50,
                                mrl::randomized_delta_sampler{5});
   renderer.render(world, img);
@@ -90,11 +89,11 @@ void debug() {
 
 void real() {
   mrl::aspect_ratio_t ratio{16, 9};
-  auto scene = mrl::make_scene(ratio, 600);
-  auto viewport = mrl::make_viewport(scene, 2.0);
+  auto img_width = 600;
+  auto img_height = mrl::image_height(ratio, img_width);
   mrl::camera_t camera{
-      .viewport = viewport,
       .focal_length = 1.0,
+      .vertical_fov = mrl::degrees(45),
   };
 
   mrl::camera_orientation_t camera_orientation{
@@ -103,6 +102,7 @@ void real() {
   };
 
   auto sun_material = mrl::lambertian_t{mrl::color_t{1, 1, 0.0}};
+  auto air = mrl::dielectric{1};
   auto ground_material = mrl::lambertian_t{mrl::color_t{0.3, 0.3, 0.3}};
   auto left_material = mrl::dielectric{2};
   auto right_material = mrl::fuzzy_metal_t{mrl::color_t{0.3, 0.3, 0.3}, 0.2};
@@ -110,14 +110,14 @@ void real() {
   auto sun = mrl::sphere_obj_t{0.1, {1, 1, -1.3}, sun_material};
   auto center_sphere = mrl::sphere_obj_t{0.5, {0, 0, -1}, center_material};
   auto left_sphere = mrl::sphere_obj_t{0.5, {-1, 0, -1}, left_material};
-  auto left_sphere_1 = mrl::bubble_obj_t{0.3, {-1, 0, -1}, left_material};
+  auto left_sphere_1 = mrl::sphere_obj_t{0.3, {-1, 0, -1}, air};
   auto right_sphere = mrl::sphere_obj_t{0.5, {1, 0, -1}, right_material};
   auto big_sphere = mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
 
   std::vector<mrl::any_scene_object> world{
       center_sphere, big_sphere, right_sphere, left_sphere, sun, left_sphere_1};
 
-  mrl::in_memory_image img{scene.width, scene.height};
+  mrl::in_memory_image img{img_width, img_height};
   mrl::img_renderer_t renderer(camera, camera_orientation, 50,
                                mrl::randomized_delta_sampler{100});
   renderer.render(world, img);
