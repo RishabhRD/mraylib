@@ -54,8 +54,9 @@ void debug() {
   auto img_width = 600;
   auto img_height = mrl::image_height(ratio, img_width);
   mrl::camera_t camera{
-      .focal_length = 1.0,
+      .focus_distance = 1.0,
       .vertical_fov = mrl::degrees(90),
+      .defocus_angle = mrl::degrees(10.0),
   };
 
   mrl::camera_orientation_t camera_orientation{
@@ -94,8 +95,9 @@ void real() {
   auto img_width = 600;
   auto img_height = mrl::image_height(ratio, img_width);
   mrl::camera_t camera{
-      .focal_length = 1.0,
+      .focus_distance = 3.4,
       .vertical_fov = mrl::degrees(20),
+      .defocus_angle = mrl::degrees(10.0),
   };
 
   mrl::camera_orientation_t camera_orientation{

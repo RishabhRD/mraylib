@@ -4,14 +4,18 @@
 
 namespace mrl {
 struct camera_t {
-  double focal_length;
+  double focus_distance;
   angle_t vertical_fov;
+  angle_t defocus_angle;
 };
 
-constexpr auto focal_length(camera_t const &camera) {
-  return camera.focal_length;
+constexpr auto focus_distance(camera_t const &camera) {
+  return camera.focus_distance;
 }
 constexpr auto vertical_fov(camera_t const &camera) {
   return camera.vertical_fov;
+}
+constexpr auto defocus_angle(camera_t const &camera) {
+  return camera.defocus_angle;
 }
 } // namespace mrl
