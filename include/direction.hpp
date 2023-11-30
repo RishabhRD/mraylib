@@ -4,17 +4,20 @@
 #include <ostream>
 
 namespace mrl {
-
-// NOTE: this is there to solve scoping issue... C++ things
-class direction_t;
-constexpr direction_t dir_from_unit(vec3 vec);
-
 class direction_t {
   vec3 direction_;
 
-  constexpr direction_t() = default;
-
 public:
+  // Precondition:
+  //   - vec3(x, y, z) is a unit vector
+  //
+  // Postcondition:
+  //   - No normalization would be applied
+  constexpr direction_t(double x, double y, double z)
+      : direction_(vec3{x, y, z}) {}
+
+  // Postcondition:
+  //   - Normalization would be applied
   constexpr direction_t(vec3 direction)
       : direction_(mrl::normalize(direction)) {}
 
@@ -33,18 +36,15 @@ public:
   friend std::ostream &operator<<(std::ostream &os, direction_t const &dir) {
     return os << dir.val();
   }
-
-  // Precondition:
-  //   - vec should be a unit vector
-  //
-  // Postcondition:
-  //   - Guarantees that no call to std::sqrt is made in construction
-  friend constexpr direction_t dir_from_unit(vec3 vec) {
-    direction_t dir;
-    dir.direction_ = vec;
-    return dir;
-  }
 };
+// Precondition:
+//   - vec should be a unit vector
+//
+// Postcondition:
+//   - Guarantees that no call to std::sqrt is made in construction
+constexpr direction_t dir_from_unit(vec3 vec) {
+  return direction_t{vec.x, vec.y, vec.z};
+}
 
 constexpr direction_t opposite(direction_t dir) {
   return dir_from_unit(-dir.val());

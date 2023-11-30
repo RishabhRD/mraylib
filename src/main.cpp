@@ -2,6 +2,7 @@
 #include "aspect_ratio.hpp"
 #include "camera/camera.hpp"
 #include "camera/camera_orientation.hpp"
+#include "direction.hpp"
 #include "hit_record.hpp"
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
@@ -59,7 +60,8 @@ void debug() {
 
   mrl::camera_orientation_t camera_orientation{
       .position = {0, 0, 0},
-      .direction = mrl::vec3{0, 0, -1},
+      .direction = mrl::direction_t{0, 0, -1},
+      .up_dir = mrl::direction_t{0, 1, 0},
   };
 
   auto material = mrl::lambertian_t{mrl::color_t{0.5, 0.5, 0.5}};
@@ -98,7 +100,8 @@ void real() {
 
   mrl::camera_orientation_t camera_orientation{
       .position = {0, 0, 0},
-      .direction = mrl::vec3{0.0, 0, -1},
+      .direction = mrl::direction_t{0, 0, -1},
+      .up_dir = mrl::direction_t{0, 1, 0},
   };
 
   auto sun_material = mrl::lambertian_t{mrl::color_t{1, 1, 0.0}};

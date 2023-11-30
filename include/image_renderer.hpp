@@ -18,13 +18,8 @@ namespace mrl {
 
 constexpr std::pair<vec3, vec3>
 viewport_direction(camera_orientation_t const &o) {
-  auto normal = o.direction.val();
-  auto upward_dir = (normal == vec3{0, 1, 0} || normal == vec3{0, -1, 0})
-                        ? vec3{0, 0, 1}
-                        : vec3{0, 1, 0};
-  auto right = normalize(cross(o.direction.val(), upward_dir));
-  auto up = normalize(cross(right, o.direction.val()));
-  return {right, -up};
+  auto right = normalize(cross(o.direction.val(), o.up_dir.val()));
+  return {right, -o.up_dir.val()};
 }
 
 constexpr vec3 viewport_topleft(vec3 right, vec3 down,
