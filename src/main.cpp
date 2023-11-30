@@ -95,13 +95,14 @@ void real() {
   auto img_height = mrl::image_height(ratio, img_width);
   mrl::camera_t camera{
       .focal_length = 1.0,
-      .vertical_fov = mrl::degrees(45),
+      .vertical_fov = mrl::degrees(20),
   };
 
   mrl::camera_orientation_t camera_orientation{
-      .position = {0, 0, 0},
-      .direction = mrl::direction_t{0, 0, -1},
-      .up_dir = mrl::direction_t{0, 1, 0},
+      .position = {-2, 2, 1},
+      .direction = mrl::point3(0, 0, -1) - mrl::point3(-2, 2, 1),
+      .up_dir = mrl::calc_up_dir({0, 1, 0},
+                                 mrl::point3(0, 0, -1) - mrl::point3(-2, 2, 1)),
   };
 
   auto sun_material = mrl::lambertian_t{mrl::color_t{1, 1, 0.0}};

@@ -75,7 +75,7 @@ constexpr void render_image(Object const &world, Image &img,
                             camera_orientation_t const &orientation,
                             Sampler &sampler, int rendering_depth) {
 
-  auto h = std::tan(vertical_fov(camera).radians);
+  auto h = std::tan(vertical_fov(camera).radians / 2);
   auto viewport_height = 2 * h * focal_length(camera);
   auto viewport_width =
       viewport_height * (static_cast<double>(width(img)) / height(img));
