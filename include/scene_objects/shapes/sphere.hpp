@@ -1,6 +1,8 @@
 #pragma once
 
 #include "direction.hpp"
+#include "generator/concepts.hpp"
+#include "generator/generator_view.hpp"
 #include "hit_record.hpp"
 #include "interval.hpp"
 #include "materials/concept.hpp"
@@ -16,7 +18,7 @@ namespace mrl {
 //   double radius;
 // };
 
-template <Material material_t> struct sphere_obj_t {
+template <typename material_t> struct sphere_obj_t {
   double radius;
   point3 center;
   material_t material;
@@ -25,12 +27,12 @@ template <Material material_t> struct sphere_obj_t {
       : radius(radius_), center(center_), material(std::move(material_)) {}
 };
 
-template <Material material_t>
+template <typename material_t>
 sphere_obj_t(double, point3, material_t) -> sphere_obj_t<material_t>;
 
 // Postcondition:
 //   - Returns the least possible t if any
-template <Material material_t>
+template <typename material_t>
 constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
                                       ray_t const &r,
                                       interval_t const &t_range) {
@@ -51,7 +53,7 @@ constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
   return std::nullopt;
 }
 
-template <Material material_t>
+template <typename material_t>
 constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
                                   point3 const &p) {
   return p - obj.center;
@@ -62,19 +64,19 @@ constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
 //   - t should be the minimum possible value for which ray intersects object
 //   - normal is perpendicular to hit point
 //   - normal should always point outside of object
-template <Material material_t>
-constexpr std::optional<hit_record_t> hit(sphere_obj_t<material_t> const &obj,
-                                          ray_t const &r,
-                                          interval_t const &interval) {
+template <DoubleGenerator Generator, Material<Generator> material_t>
+constexpr std::optional<hit_record_t>
+hit(sphere_obj_t<material_t> const &obj, ray_t const &r,
+    interval_t const &interval, generator_view<Generator> rand) {
   auto t_opt = hit_t(obj, r, interval);
-  return t_opt.transform([&obj, &r](double t) {
+  return t_opt.transform([&obj, &r, rand](double t) {
     auto point = r.at(t);
     auto normal = calc_normal(obj, point);
     return hit_record_t{
         .t = t,
         .hit_point = point,
         .normal = normal,
-        .scattering = scatter(obj.material, r, point, normal),
+        .scattering = scatter(obj.material, r, point, normal, rand),
     };
   });
 }

@@ -2,6 +2,7 @@
 #include "aspect_ratio.hpp"
 #include "camera/camera.hpp"
 #include "camera/camera_orientation.hpp"
+#include "color.hpp"
 #include "direction.hpp"
 #include "hit_record.hpp"
 #include "image/in_memory_image.hpp"
@@ -11,14 +12,11 @@
 #include "materials/dielectric.hpp"
 #include "materials/lambertian.hpp"
 #include "materials/metal.hpp"
-#include "pixel_sampler/randomized_delta_sampler.hpp"
+#include "pixel_sampler/delta_sampler.hpp"
+#include "point.hpp"
 #include "scene_objects/any_scene_object.hpp"
-#include "scene_objects/debug/debug_object.hpp"
-#include "scene_objects/debug/hooks/noop_hook.hpp"
-#include "scene_objects/debug/hooks/ref_hook.hpp"
-#include "scene_objects/debug/hooks/tagged_stream_hook.hpp"
+#include "scene_objects/concepts.hpp"
 #include "scene_objects/scene_object_range.hpp"
-#include "scene_objects/shapes/bubble.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "std/random_double_generator.hpp"
 #include "std/ranges.hpp"
@@ -49,47 +47,6 @@ struct count_hook {
   }
 };
 
-void debug() {
-  mrl::aspect_ratio_t ratio{16, 9};
-  auto img_width = 600;
-  auto img_height = mrl::image_height(ratio, img_width);
-  mrl::camera_t camera{
-      .focus_distance = 1.0,
-      .vertical_fov = mrl::degrees(90),
-      .defocus_angle = mrl::degrees(10.0),
-  };
-
-  mrl::camera_orientation_t camera_orientation{
-      .position = {0, 0, 0},
-      .direction = mrl::direction_t{0, 0, -1},
-      .up_dir = mrl::direction_t{0, 1, 0},
-  };
-
-  auto material = mrl::lambertian_t{mrl::color_t{0.5, 0.5, 0.5}};
-
-  auto small_sphere = mrl::sphere_obj_t{0.5, {0, 0, -1}, material};
-  auto big_sphere = mrl::sphere_obj_t{100, {0, -100.5, -1}, material};
-
-  count_hook hook{};
-
-  mrl::any_scene_object small =
-      mrl::debug_obj_t{small_sphere, mrl::noop_hook{}};
-  mrl::any_scene_object big = mrl::debug_obj_t{big_sphere, mrl::ref_hook{hook}};
-
-  std::vector<mrl::any_scene_object> world{small, big};
-
-  mrl::in_memory_image img{img_width, img_height};
-  mrl::img_renderer_t renderer(camera, camera_orientation, 50,
-                               mrl::randomized_delta_sampler{5});
-  renderer.render(world, img);
-
-  std::cerr << "nil : " << hook.nil << '\n'
-            << "neg : " << hook.neg << '\n'
-            << "zero : " << hook.zero << '\n'
-            << "pos : " << hook.pos << '\n';
-  mrl::write_ppm_img(std::cout, img);
-}
-
 void real() {
   mrl::aspect_ratio_t ratio{16, 9};
   auto img_width = 600;
@@ -107,6 +64,8 @@ void real() {
                                  mrl::point3(0, 0, -1) - mrl::point3(-2, 2, 1)),
   };
 
+  auto rand = mrl::random_double_generator{};
+
   auto sun_material = mrl::lambertian_t{mrl::color_t{1, 1, 0.0}};
   auto air = mrl::dielectric{1};
   auto ground_material = mrl::lambertian_t{mrl::color_t{0.3, 0.3, 0.3}};
@@ -120,14 +79,72 @@ void real() {
   auto right_sphere = mrl::sphere_obj_t{0.5, {1, 0, -1}, right_material};
   auto big_sphere = mrl::sphere_obj_t{100, {0, -100.5, -1}, ground_material};
 
-  std::vector<mrl::any_scene_object> world{
+  std::vector<mrl::any_scene_object<mrl::random_double_generator>> world{
       center_sphere, big_sphere, right_sphere, left_sphere, sun, left_sphere_1};
 
   mrl::in_memory_image img{img_width, img_height};
   mrl::img_renderer_t renderer(camera, camera_orientation, 50,
-                               mrl::randomized_delta_sampler{100});
+                               mrl::delta_sampler{100}, rand);
   renderer.render(world, img);
   mrl::write_ppm_img(std::cout, img);
 }
 
-int main() { real(); }
+void real_img() {
+  mrl::aspect_ratio_t ratio{16, 9};
+  auto img_width = 1000;
+  auto img_height = mrl::image_height(ratio, img_width);
+  mrl::in_memory_image img{img_width, img_height};
+  mrl::camera_t camera{
+      .focus_distance = 10.0,
+      .vertical_fov = mrl::degrees(20),
+      .defocus_angle = mrl::degrees(0.0),
+  };
+
+  mrl::camera_orientation_t camera_orientation{
+      .position = {13, 2, 3},
+      .direction = mrl::point3(0, 0, 0) - mrl::point3(13, 2, 3),
+      .up_dir = mrl::direction_t{0, 1, 0},
+  };
+
+  auto rand = mrl::random_double_generator{};
+
+  std::vector<mrl::any_scene_object<mrl::random_double_generator>> world;
+  mrl::dielectric mat1(1.5);
+  mrl::lambertian_t mat2(mrl::color_t{0.4, 0.2, 0.1});
+  mrl::metal_t mat3(mrl::color_t{0.7, 0.6, 0.5});
+
+  world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{0, 1, 0}, mat1});
+  world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{-4, 1, 0}, mat2});
+  world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{4, 1, 0}, mat3});
+
+  for (int a = -11; a < 11; ++a) {
+    for (int b = -11; b < 11; ++b) {
+      auto choose_mat = rand(0.0, 1.0);
+      auto center =
+          mrl::point3{a + 0.9 * rand(0.0, 1.0), 0.2, b * 0.9 * rand(0.0, 1.0)};
+      if (choose_mat < 0.8) {
+        auto color =
+            mrl::color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)} *
+            mrl::color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)};
+        world.push_back(
+            mrl::sphere_obj_t{0.2, center, mrl::lambertian_t{color}});
+      } else if (choose_mat < 0.95) {
+        auto color =
+            mrl::color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)};
+        auto fuzz = rand(0.5, 1.0);
+        world.push_back(
+            mrl::sphere_obj_t{0.2, center, mrl::fuzzy_metal_t{color, fuzz}});
+
+      } else {
+        world.push_back(mrl::sphere_obj_t{0.2, center, mrl::dielectric{1.5}});
+      }
+    }
+  }
+
+  mrl::img_renderer_t renderer(camera, camera_orientation, 50,
+                               mrl::delta_sampler{100}, rand);
+  renderer.render(world, img);
+  mrl::write_ppm_img(std::cout, img);
+}
+
+int main() { real_img(); }

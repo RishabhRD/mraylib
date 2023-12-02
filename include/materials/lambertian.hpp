@@ -2,29 +2,20 @@
 
 #include "color.hpp"
 #include "direction.hpp"
+#include "generator/concepts.hpp"
+#include "generator/direction_generator.hpp"
+#include "generator/generator_view.hpp"
 #include "materials/scatter_record.hpp"
 #include "normal.hpp"
 #include "point.hpp"
-#include "random/random_vector.hpp"
 #include "ray.hpp"
 #include "vector.hpp"
-#include <functional>
 #include <optional>
 
 namespace mrl {
-template <std::invocable DirectionGenerator = random_direction_generator>
-  requires std::same_as<std::invoke_result_t<DirectionGenerator>, direction_t>
-struct basic_lambertian_t {
+struct lambertian_t {
   color_t albedo;
-  mutable DirectionGenerator gen_dir;
-
-  constexpr basic_lambertian_t(
-      color_t albedo_,
-      DirectionGenerator gen_dir_ = random_direction_generator())
-      : albedo(std::move(albedo_)), gen_dir(std::move(gen_dir_)) {}
 };
-
-using lambertian_t = basic_lambertian_t<>;
 
 constexpr std::optional<scatter_record_t>
 lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
@@ -45,13 +36,12 @@ lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
   };
 }
 
-template <std::invocable DirectionGenerator>
-  requires std::same_as<std::invoke_result_t<DirectionGenerator>, direction_t>
-constexpr auto scatter(basic_lambertian_t<DirectionGenerator> const &material,
-                       ray_t const &in_ray, point3 const &hit_point,
-                       direction_t const &normal) {
+template <DoubleGenerator Generator>
+constexpr auto scatter(lambertian_t const &material, ray_t const &in_ray,
+                       point3 const &hit_point, direction_t const &normal,
+                       generator_view<Generator> rand) {
   return lambertian_scatter(material.albedo, in_ray, hit_point, normal,
-                            std::invoke(material.gen_dir));
+                            direction_generator{}(rand));
 }
 
 } // namespace mrl
