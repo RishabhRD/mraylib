@@ -1,6 +1,6 @@
 #pragma once
 
-#include "std/random_double_generator.hpp"
+#include "generator/random_double_generator.hpp"
 #include <exec/inline_scheduler.hpp>
 namespace mrl {
 using inline_scheduler = exec::inline_scheduler;
