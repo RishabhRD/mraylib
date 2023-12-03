@@ -20,10 +20,12 @@
 #include "scene_objects/shapes/sphere.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
+#include "schedulers/thread_pool_scheduler.hpp"
 #include "schedulers/type_traits.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
 #include <iostream>
+#include <stdexec/execution.hpp>
 
 struct count_hook {
   int zero = 0;
@@ -87,13 +89,15 @@ void real() {
   mrl::in_memory_image img{img_width, img_height};
 
   mrl::img_renderer_t renderer(camera, camera_orientation, sch);
-  renderer.render(world, img);
+  stdexec::sync_wait(renderer.render(world, img));
   mrl::write_ppm_img(std::cout, img);
 }
 
 void real_img() {
-  using any_object = mrl::any_object_t<mrl::inline_scheduler>;
-  mrl::inline_scheduler sch;
+  auto const num_threads = std::thread::hardware_concurrency();
+  auto thread_pool = mrl::static_thread_pool{num_threads};
+  using any_object = mrl::any_object_t<mrl::thread_pool_scheduler>;
+  mrl::thread_pool_scheduler sch = thread_pool.get_scheduler();
   auto rand = random_generator(sch);
 
   mrl::aspect_ratio_t ratio{16, 9};
@@ -146,7 +150,7 @@ void real_img() {
   }
 
   mrl::img_renderer_t renderer(camera, camera_orientation, sch);
-  renderer.render(world, img);
+  stdexec::sync_wait(renderer.render(world, img));
   mrl::write_ppm_img(std::cout, img);
 }
 
