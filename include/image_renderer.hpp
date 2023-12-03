@@ -11,12 +11,16 @@
 #include "image/concepts.hpp"
 #include "interval.hpp"
 #include "pixel_sampler/concepts.hpp"
+#include "pixel_sampler/delta_sampler.hpp"
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/shapes/sphere.hpp"
+#include "schedulers/concepts.hpp"
+#include "schedulers/type_traits.hpp"
 #include "vector.hpp"
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 namespace mrl {
 
@@ -80,8 +84,8 @@ constexpr color_t sampled_ray_color(RayOriginGenerator &gen_center,
   return color / num_ele;
 }
 
-template <Camera camera_t, typename Object, RandomAccessImage Image,
-          DoubleGenerator random_t, PixelSampler<random_t> Sampler>
+template <Camera camera_t, RandomAccessImage Image, DoubleGenerator random_t,
+          SceneObject<random_t> Object, PixelSampler<random_t> Sampler>
 constexpr void
 render_image(Object const &world, Image &img, camera_t const &camera,
              camera_orientation_t const &orientation, Sampler &sampler,
@@ -133,34 +137,48 @@ render_image(Object const &world, Image &img, camera_t const &camera,
   }
 }
 
-template <Camera camera_t, DoubleGenerator random_generator_t,
-          PixelSampler<random_generator_t> Sampler>
+template <Camera camera_t, Scheduler scheduler_t,
+          typename Sampler = delta_sampler>
 struct img_renderer_t {
+  using random_generator_t = scheduler_random_generator_t<scheduler_t>;
+  static_assert(PixelSampler<Sampler, random_generator_t>);
   camera_t camera;
   camera_orientation_t camera_orientation;
+  scheduler_t scheduler;
+  random_generator_t gen;
   int rendering_depth;
   Sampler sampler;
-  generator_view<random_generator_t> rand;
 
   img_renderer_t(camera_t camera_, camera_orientation_t camera_orientation_,
-                 int rendering_depth_, Sampler sampler_,
-                 random_generator_t &rand_)
+                 scheduler_t scheduler_, random_generator_t rand_,
+                 int rendering_depth_ = 50,
+                 Sampler sampler_ = delta_sampler(100))
       : camera{std::move(camera_)},
         camera_orientation{std::move(camera_orientation_)},
-        rendering_depth(rendering_depth_), sampler{std::move(sampler_)},
-        rand(rand_) {}
+        scheduler(std::move(scheduler_)), gen(std::move(rand_)),
+        rendering_depth(rendering_depth_), sampler{std::move(sampler_)} {}
 
-  // TODO: look for all templated on Generator thing and make it good looking
-  template <typename Object, RandomAccessImage Image>
+  img_renderer_t(camera_t camera_, camera_orientation_t camera_orientation_,
+                 scheduler_t scheduler_, int rendering_depth_ = 100,
+                 Sampler sampler_ = delta_sampler(50))
+      : img_renderer_t(std::move(camera_), std::move(camera_orientation_),
+                       scheduler_, random_generator(scheduler_),
+                       rendering_depth_, std::move(sampler_)) {}
+
+  template <SceneObject<random_generator_t> Object, RandomAccessImage Image>
   constexpr void render(Object const &world, Image &img) {
     render_image(world, img, camera, camera_orientation, sampler,
-                 rendering_depth, rand);
+                 rendering_depth, generator_view{gen});
   }
 };
 
-template <Camera camera_t, DoubleGenerator random_generator_t,
-          PixelSampler<random_generator_t> Sampler>
-img_renderer_t(camera_t, camera_orientation_t, int, Sampler,
-               random_generator_t &)
-    -> img_renderer_t<camera_t, random_generator_t, Sampler>;
+template <Camera camera_t, Scheduler scheduler_t, typename Sampler>
+img_renderer_t(camera_t, camera_orientation_t, scheduler_t,
+               typename img_renderer_t<camera_t, scheduler_t,
+                                       Sampler>::random_generator_t &,
+               int, Sampler) -> img_renderer_t<camera_t, scheduler_t, Sampler>;
+
+template <Camera camera_t, Scheduler scheduler_t, typename Sampler>
+img_renderer_t(camera_t, camera_orientation_t, scheduler_t, int, Sampler)
+    -> img_renderer_t<camera_t, scheduler_t, Sampler>;
 } // namespace mrl
