@@ -44,4 +44,14 @@ constexpr auto chunk_pair(Range &&rng) {
   });
 }
 } // namespace views
+namespace ranges {
+template <std::ranges::input_range Range> auto to_vector(Range &&rng) {
+  using value_type = std::ranges::range_value_t<Range>;
+  std::vector<value_type> res;
+  for (auto n : rng) {
+    res.push_back(std::move(n));
+  }
+  return res;
+}
+}; // namespace ranges
 } // namespace mrl

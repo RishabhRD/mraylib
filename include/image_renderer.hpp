@@ -24,6 +24,7 @@
 #include <exec/async_scope.hpp>
 #include <functional>
 #include <limits>
+#include <numeric>
 #include <ranges>
 #include <stdexec/__detail/__execution_fwd.hpp>
 #include <stdexec/execution.hpp>
@@ -79,26 +80,35 @@ constexpr color_t ray_color(ray_t const &ray, Object const &world, int depth,
 //   - std::ranges::distance(rng) >= 1
 //   - RayOriginGenerator generates center in defocus disk
 template <DoubleGenerator Generator, SceneObject<Generator> Object,
-          std::ranges::input_range VectorRange,
+          std::ranges::input_range VectorRange, Scheduler scheduler_t,
           std::invocable RayOriginGenerator>
   requires RangeValueType<VectorRange, vec3> &&
            std::same_as<std::invoke_result_t<RayOriginGenerator>, vec3>
-constexpr color_t sampled_ray_color(RayOriginGenerator &gen_center,
-                                    VectorRange const &pixel_points,
-                                    Object const &world, int depth,
-                                    generator_view<Generator> rand) {
-  double num_ele = 0.0;
-  color_t color{0, 0, 0};
-  for (vec3 const &pixel_center : pixel_points) {
-    auto ray_origin = std::invoke(gen_center);
-    ray_t r{
-        .origin = ray_origin,
-        .direction = pixel_center - ray_origin,
-    };
-    color += ray_color(r, world, depth, rand);
-    ++num_ele;
-  }
-  return color / num_ele;
+constexpr auto sampled_ray_color(RayOriginGenerator &gen_center,
+                                 VectorRange const &pixel_points_rng,
+                                 Object const &world, int depth,
+                                 scheduler_t scheduler,
+                                 generator_view<Generator> rand) {
+  auto pixel_points = ranges::to_vector(pixel_points_rng);
+  auto num_pixel_points = std::size(pixel_points);
+  return stdexec::transfer_just(scheduler, std::move(pixel_points),
+                                std::vector<color_t>(num_pixel_points)) //
+         | stdexec::bulk(num_pixel_points,
+                         [gen_center, depth, rand,
+                          &world](auto i, auto const &pixel_centers,
+                                  auto &result_buffer) {
+                           auto ray_origin = std::invoke(gen_center);
+                           ray_t r{
+                               .origin = ray_origin,
+                               .direction = pixel_centers[i] - ray_origin,
+                           };
+                           result_buffer[i] = ray_color(r, world, depth, rand);
+                         }) //
+         | stdexec::then([](auto const &, auto &&ray_colors) {
+             return std::reduce(std::begin(ray_colors), std::end(ray_colors),
+                                color_t{0, 0, 0}) /
+                    static_cast<double>(std::size(ray_colors));
+           });
 }
 
 template <Camera camera_t, RandomAccessImage Image>
@@ -158,11 +168,8 @@ constexpr auto generate_pixel(std::pair<int, int> coord, Object const &world,
           .pixel_delta_v = ctx.pixel_delta_v,
       },
       rand);
-  return stdexec::transfer_just(scheduler, std::move(sampling_points)) |
-         stdexec::then([&world, rand, ctx, ray_origin_generator](auto samples) {
-           return sampled_ray_color(ray_origin_generator, std::move(samples),
-                                    world, ctx.rendering_depth, rand);
-         });
+  return sampled_ray_color(ray_origin_generator, std::move(sampling_points),
+                           world, ctx.rendering_depth, scheduler, rand);
 }
 
 template <Camera camera_t, RandomAccessImage Image, Scheduler scheduler_t,
