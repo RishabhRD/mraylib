@@ -9,6 +9,7 @@
 #include "generator/generator_view.hpp"
 #include "generator/unit_disk_generator.hpp"
 #include "image/concepts.hpp"
+#include "image/in_memory_image.hpp"
 #include "interval.hpp"
 #include "pixel_sampler/concepts.hpp"
 #include "pixel_sampler/delta_sampler.hpp"
@@ -21,14 +22,24 @@
 #include "vector.hpp"
 #include <cmath>
 #include <exec/async_scope.hpp>
+#include <functional>
 #include <limits>
 #include <ranges>
 #include <stdexec/__detail/__execution_fwd.hpp>
+#include <stdexec/execution.hpp>
 #include <type_traits>
 
-// TODO: clean up the code... its messed up now
-
 namespace mrl {
+
+struct rendering_context_t {
+  vec3 pixel_delta_u;
+  vec3 pixel_delta_v;
+  point3 pixel00_loc;
+  vec3 defocus_disk_u;
+  vec3 defocus_disk_v;
+  int rendering_depth;
+  vec3 camera_position;
+};
 
 constexpr std::pair<vec3, vec3>
 viewport_direction(camera_orientation_t const &o) {
@@ -90,15 +101,10 @@ constexpr color_t sampled_ray_color(RayOriginGenerator &gen_center,
   return color / num_ele;
 }
 
-template <Camera camera_t, RandomAccessImage Image, Scheduler scheduler_t,
-          DoubleGenerator random_t, SceneObject<random_t> Object,
-          PixelSampler<random_t> Sampler>
-constexpr auto
-render_image(Object const &world, Image &img, camera_t const &camera,
-             camera_orientation_t const &orientation, Sampler &sampler,
-             int rendering_depth, scheduler_t scheduler,
-             exec::async_scope &scope, generator_view<random_t> rand) {
-
+template <Camera camera_t, RandomAccessImage Image>
+constexpr auto build_rendering_context(Image &img, camera_t const &camera,
+                                       camera_orientation_t const &orientation,
+                                       int rendering_depth) {
   auto focus_dist = focus_distance(camera);
   auto h = std::tan(vertical_fov(camera).radians / 2);
   auto viewport_height = 2 * h * focus_dist;
@@ -120,35 +126,62 @@ render_image(Object const &world, Image &img, camera_t const &camera,
       focus_dist * std::tan(defocus_angle(camera).radians / 2);
   auto defocus_disk_u = u_dir * defocus_radius;
   auto defocus_disk_v = (-v_dir) * defocus_radius;
-
-  auto ray_origin_generator = [defocus_disk_u, defocus_disk_v, orientation,
-                               rand] {
-    auto p = unit_disk_generator{}(rand);
-    return orientation.position + defocus_disk_u * p.x + defocus_disk_v * p.y;
+  return rendering_context_t{
+      .pixel_delta_u = pixel_delta_u,
+      .pixel_delta_v = pixel_delta_v,
+      .pixel00_loc = pixel00_loc,
+      .defocus_disk_u = defocus_disk_u,
+      .defocus_disk_v = defocus_disk_v,
+      .rendering_depth = rendering_depth,
+      .camera_position = orientation.position,
   };
+}
 
-  auto set_pixel = [pixel00_loc, pixel_delta_u, pixel_delta_v, &sampler,
-                    ray_origin_generator, rand, &world, rendering_depth,
-                    &img](std::pair<int, int> coord) {
-    auto const j = coord.first;
-    auto const i = coord.second;
-    auto pixel_center = pixel00_loc + i * pixel_delta_u + j * pixel_delta_v;
-    auto sampling_points = sampler(
-        {
-            .point = pixel_center,
-            .pixel_delta_u = pixel_delta_u,
-            .pixel_delta_v = pixel_delta_v,
-        },
-        rand);
-    color_t pixel_color =
-        sampled_ray_color(ray_origin_generator, std::move(sampling_points),
-                          world, rendering_depth, rand);
-    set_pixel_at(img, j, i, pixel_color);
-  };
+template <DoubleGenerator random_t, SceneObject<random_t> Object,
+          PixelSampler<random_t> Sampler, Scheduler scheduler_t>
+constexpr auto generate_pixel(std::pair<int, int> coord, Object const &world,
+                              rendering_context_t ctx, Sampler sampler,
+                              generator_view<random_t> rand,
+                              scheduler_t scheduler) {
+  auto [row, col] = coord;
+  auto pixel_center =
+      ctx.pixel00_loc + col * ctx.pixel_delta_u + row * ctx.pixel_delta_v;
+  auto sampling_points = sampler(
+      {
+          .point = pixel_center,
+          .pixel_delta_u = ctx.pixel_delta_u,
+          .pixel_delta_v = ctx.pixel_delta_v,
+      },
+      rand);
+  return stdexec::transfer_just(scheduler, std::move(sampling_points)) |
+         stdexec::then([&world, rand, ctx](auto samples) {
+           auto ray_origin_generator = [ctx, rand] {
+             auto p = unit_disk_generator{}(rand);
+             return ctx.camera_position + ctx.defocus_disk_u * p.x +
+                    ctx.defocus_disk_v * p.y;
+           };
+           return sampled_ray_color(ray_origin_generator, std::move(samples),
+                                    world, ctx.rendering_depth, rand);
+         });
+}
 
-  auto set_pixel_task = [set_pixel, scheduler](auto coord) {
-    return stdexec::schedule(scheduler) |
-           stdexec::then([set_pixel, coord] { set_pixel(coord); });
+template <Camera camera_t, RandomAccessImage Image, Scheduler scheduler_t,
+          DoubleGenerator random_t, SceneObject<random_t> Object,
+          PixelSampler<random_t> Sampler>
+constexpr auto
+render_image(Object const &world, Image &img, camera_t const &camera,
+             camera_orientation_t const &orientation, Sampler sampler,
+             int rendering_depth, scheduler_t scheduler,
+             exec::async_scope &scope, generator_view<random_t> rand) {
+  auto rendering_ctx =
+      build_rendering_context(img, camera, orientation, rendering_depth);
+  auto set_pixel_task = [&world, sampler, &img, scheduler, rand,
+                         rendering_ctx](std::pair<int, int> coord) {
+    return generate_pixel(coord, world, rendering_ctx, sampler, rand,
+                          scheduler) //
+           | stdexec::then([&img, coord](auto color) {
+               set_pixel_at(img, coord.first, coord.second, color);
+             });
   };
 
   namespace vw = std::views;
