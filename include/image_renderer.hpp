@@ -144,6 +144,11 @@ constexpr auto generate_pixel(std::pair<int, int> coord, Object const &world,
                               generator_view<random_t> rand,
                               scheduler_t scheduler) {
   auto [row, col] = coord;
+  auto ray_origin_generator = [ctx, rand] {
+    auto p = unit_disk_generator{}(rand);
+    return ctx.camera_position + ctx.defocus_disk_u * p.x +
+           ctx.defocus_disk_v * p.y;
+  };
   auto pixel_center =
       ctx.pixel00_loc + col * ctx.pixel_delta_u + row * ctx.pixel_delta_v;
   auto sampling_points = sampler(
@@ -154,12 +159,7 @@ constexpr auto generate_pixel(std::pair<int, int> coord, Object const &world,
       },
       rand);
   return stdexec::transfer_just(scheduler, std::move(sampling_points)) |
-         stdexec::then([&world, rand, ctx](auto samples) {
-           auto ray_origin_generator = [ctx, rand] {
-             auto p = unit_disk_generator{}(rand);
-             return ctx.camera_position + ctx.defocus_disk_u * p.x +
-                    ctx.defocus_disk_v * p.y;
-           };
+         stdexec::then([&world, rand, ctx, ray_origin_generator](auto samples) {
            return sampled_ray_color(ray_origin_generator, std::move(samples),
                                     world, ctx.rendering_depth, rand);
          });
