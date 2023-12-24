@@ -5,7 +5,7 @@ include(cmake/StandardProjectSettings.cmake)
 include(cmake/CompilerWarnings.cmake)
 include(package.cmake)
 
-add_compile_options(-std=c++2b)
+add_compile_options(-std=c++2b -fconcepts-diagnostics-depth=3)
 # TODO: clang-tidy creating problem with the same
 # set(CMAKE_CXX_STANDARD 23)
 
