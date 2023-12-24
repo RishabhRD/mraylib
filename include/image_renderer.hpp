@@ -21,7 +21,6 @@
 #include "std/ranges.hpp"
 #include "vector.hpp"
 #include <cmath>
-#include <exec/async_scope.hpp>
 #include <functional>
 #include <limits>
 #include <ranges>
@@ -138,12 +137,10 @@ constexpr auto build_rendering_context(Image &img, camera_t const &camera,
 }
 
 template <DoubleGenerator random_t, SceneObject<random_t> Object,
-          PixelSampler<random_t> Sampler, Scheduler scheduler_t>
-constexpr auto generate_pixel(std::pair<int, int> coord, Object const &world,
+          PixelSampler<random_t> Sampler>
+constexpr auto generate_pixel(int row, int col, Object const &world,
                               rendering_context_t ctx, Sampler sampler,
-                              generator_view<random_t> rand,
-                              scheduler_t scheduler) {
-  auto [row, col] = coord;
+                              generator_view<random_t> rand) {
   auto ray_origin_generator = [ctx, rand] {
     auto p = unit_disk_generator{}(rand);
     return ctx.camera_position + ctx.defocus_disk_u * p.x +
@@ -158,11 +155,8 @@ constexpr auto generate_pixel(std::pair<int, int> coord, Object const &world,
           .pixel_delta_v = ctx.pixel_delta_v,
       },
       rand);
-  return stdexec::transfer_just(scheduler, std::move(sampling_points)) |
-         stdexec::then([&world, rand, ctx, ray_origin_generator](auto samples) {
-           return sampled_ray_color(ray_origin_generator, std::move(samples),
-                                    world, ctx.rendering_depth, rand);
-         });
+  return sampled_ray_color(ray_origin_generator, std::move(sampling_points),
+                           world, ctx.rendering_depth, rand);
 }
 
 template <Camera camera_t, RandomAccessImage Image, Scheduler scheduler_t,
@@ -172,26 +166,20 @@ constexpr auto
 render_image(Object const &world, Image &img, camera_t const &camera,
              camera_orientation_t const &orientation, Sampler sampler,
              int rendering_depth, scheduler_t scheduler,
-             exec::async_scope &scope, generator_view<random_t> rand) {
+             generator_view<random_t> rand) {
   auto rendering_ctx =
       build_rendering_context(img, camera, orientation, rendering_depth);
-  auto set_pixel_task = [&world, sampler, &img, scheduler, rand,
-                         rendering_ctx](std::pair<int, int> coord) {
-    return generate_pixel(coord, world, rendering_ctx, sampler, rand,
-                          scheduler) //
-           | stdexec::then([&img, coord](auto color) {
-               set_pixel_at(img, coord.first, coord.second, color);
-             });
+
+  auto set_pixel_at_coord = [&img, &world, rendering_ctx, sampler,
+                             rand](auto coord) {
+    auto row = coord / width(img);
+    auto col = coord % width(img);
+    auto color = generate_pixel(row, col, world, rendering_ctx, sampler, rand);
+    set_pixel_at(img, row, col, color);
   };
 
-  namespace vw = std::views;
-  auto build_img_task = vw::cartesian_product(vw::iota(0, height(img)),
-                                              vw::iota(0, width(img))) //
-                        | vw::transform(set_pixel_task);
-  for (auto task : build_img_task) {
-    scope.spawn(task);
-  }
-  return scope.on_empty();
+  return stdexec::transfer_just(scheduler) |
+         stdexec::bulk(height(img) * width(img), set_pixel_at_coord);
 }
 
 template <Camera camera_t, Scheduler scheduler_t,
@@ -205,7 +193,6 @@ struct img_renderer_t {
   random_generator_t gen;
   int rendering_depth;
   Sampler sampler;
-  exec::async_scope scope;
 
   img_renderer_t(camera_t camera_, camera_orientation_t camera_orientation_,
                  scheduler_t scheduler_, random_generator_t rand_,
@@ -226,7 +213,7 @@ struct img_renderer_t {
   template <SceneObject<random_generator_t> Object, RandomAccessImage Image>
   constexpr auto render(Object const &world, Image &img) {
     return render_image(world, img, camera, camera_orientation, sampler,
-                        rendering_depth, scheduler, scope, generator_view{gen});
+                        rendering_depth, scheduler, generator_view{gen});
   }
 };
 
