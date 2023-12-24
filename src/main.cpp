@@ -96,8 +96,9 @@ void real() {
 void real_img() {
   auto const num_threads = std::thread::hardware_concurrency();
   auto thread_pool = mrl::static_thread_pool{num_threads};
-  using any_object = mrl::any_object_t<mrl::thread_pool_scheduler>;
-  mrl::thread_pool_scheduler sch = thread_pool.get_scheduler();
+  auto sch = thread_pool.get_scheduler();
+  using any_object = mrl::any_object_t<decltype(sch)>;
+
   auto rand = random_generator(sch);
 
   mrl::aspect_ratio_t ratio{16, 9};
