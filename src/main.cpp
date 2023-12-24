@@ -20,7 +20,7 @@
 #include "scene_objects/shapes/sphere.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
-#include "schedulers/thread_pool_scheduler.hpp"
+#include "schedulers/static_thread_pool_scheduler.hpp"
 #include "schedulers/type_traits.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
