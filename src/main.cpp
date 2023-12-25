@@ -29,6 +29,7 @@
 #include <exec/async_scope.hpp>
 #include <fstream>
 #include <ios>
+#include <iostream>
 #include <stdexec/execution.hpp>
 
 struct count_hook {
