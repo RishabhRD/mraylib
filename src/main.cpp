@@ -21,13 +21,14 @@
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
 #include "schedulers/static_thread_pool_scheduler.hpp"
+#include "schedulers/thread_pool.hpp"
 #include "schedulers/type_traits.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
 #include <cstdlib>
+#include <exec/async_scope.hpp>
 #include <fstream>
 #include <ios>
-#include <iostream>
 #include <stdexec/execution.hpp>
 
 struct count_hook {
@@ -98,14 +99,14 @@ void real() {
 
 void real_img() {
   auto const num_threads = std::thread::hardware_concurrency();
-  auto thread_pool = mrl::static_thread_pool{num_threads};
+  auto thread_pool = mrl::thread_pool{num_threads};
   auto sch = thread_pool.get_scheduler();
   using any_object = mrl::any_object_t<decltype(sch)>;
 
   auto rand = random_generator(sch);
 
   mrl::aspect_ratio_t ratio{16, 9};
-  auto img_width = 1000;
+  auto img_width = 600;
   auto img_height = mrl::image_height(ratio, img_width);
   mrl::in_memory_image img{img_width, img_height};
   mrl::camera_t camera{
