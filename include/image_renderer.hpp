@@ -178,7 +178,7 @@ render_image(Object const &world, Image &img, camera_t const &camera,
     set_pixel_at(img, row, col, color);
   };
 
-  return stdexec::transfer_just(scheduler) |
+  return stdexec::schedule(scheduler) |
          stdexec::bulk(height(img) * width(img), set_pixel_at_coord);
 }
 

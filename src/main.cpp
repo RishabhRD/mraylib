@@ -24,6 +24,9 @@
 #include "schedulers/type_traits.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
+#include <cstdlib>
+#include <fstream>
+#include <ios>
 #include <iostream>
 #include <stdexec/execution.hpp>
 
@@ -150,9 +153,11 @@ void real_img() {
     }
   }
 
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
+  std::ofstream os(path, std::ios::out);
   mrl::img_renderer_t renderer(camera, camera_orientation, sch);
   stdexec::sync_wait(renderer.render(world, img));
-  mrl::write_ppm_img(std::cout, img);
+  mrl::write_ppm_img(os, img);
 }
 
 int main() { real_img(); }
