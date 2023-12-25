@@ -319,13 +319,13 @@ public:
       e.join();
   }
 
-  template <typename F> void submit(F &&f) {
+  void submit(__thread_pool_details::task_base *f) {
     auto i = _index++;
     for (unsigned n = 0; n != _count * _retry_factor; ++n) {
-      if (_q[(i + n) % _count].try_push(std::forward<F>(f)))
+      if (_q[(i + n) % _count].try_push(f))
         return;
     }
-    _q[i % _count].push(std::forward<F>(f));
+    _q[i % _count].push(f);
   }
 
   auto get_scheduler() { return thread_pool_scheduler{this}; }
