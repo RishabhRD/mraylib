@@ -20,6 +20,7 @@
 #include "scene_objects/shapes/sphere.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
+#include "schedulers/libdispatch_queue.hpp"
 #include "schedulers/static_thread_pool_scheduler.hpp"
 #include "schedulers/thread_pool.hpp"
 #include "schedulers/type_traits.hpp"
@@ -162,4 +163,15 @@ void real_img() {
   mrl::write_ppm_img(os, img);
 }
 
-int main() { real_img(); }
+void test() {
+  mrl::libdispatch_queue q{};
+  auto sch = q.get_scheduler();
+  auto task = stdexec::schedule(sch) | stdexec::then([] {
+                for (int i = 0; i < 100000; ++i) {
+                  std::cout << i << std::endl;
+                };
+              });
+  stdexec::sync_wait(task);
+}
+
+int main() { test(); }
