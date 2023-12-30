@@ -10,16 +10,21 @@ namespace mrl {
 template <typename Object> struct object_ref_t {
   Object *object;
 
-  object_ref_t(Object &obj_ref) : object(&obj_ref) {}
+  constexpr object_ref_t(Object &obj_ref) : object(&obj_ref) {}
 };
 
 template <typename Object>
 object_ref_t(Object &obj_ref) -> object_ref_t<Object>;
 
 template <DoubleGenerator Generator, SceneObject<Generator> Object>
-std::optional<hit_record_t> hit(object_ref_t<Object> const &obj,
-                                ray_t const &ray,
-                                generator_view<Generator> rand) {
+constexpr std::optional<hit_record_t> hit(object_ref_t<Object> const &obj,
+                                          ray_t const &ray,
+                                          generator_view<Generator> rand) {
   return hit(*(obj.object), ray, rand);
+}
+
+template <BoundedObject Object>
+constexpr bound_t get_bounds(object_ref_t<Object> const &obj) {
+  return get_bounds(*(obj.object));
 }
 } // namespace mrl

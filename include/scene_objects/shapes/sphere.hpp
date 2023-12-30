@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bound.hpp"
 #include "direction.hpp"
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
@@ -79,6 +80,18 @@ hit(sphere_obj_t<material_t> const &obj, ray_t const &r,
         .scattering = scatter(obj.material, r, point, normal, rand),
     };
   });
+}
+
+template <typename Material>
+bound_t get_bounds(sphere_obj_t<Material> const &sphere) {
+  return {
+      .x_range = interval_t{sphere.center.x - sphere.radius,
+                            sphere.center.x + sphere.radius},
+      .y_range = interval_t{sphere.center.y - sphere.radius,
+                            sphere.center.y + sphere.radius},
+      .z_range = interval_t{sphere.center.z - sphere.radius,
+                            sphere.center.z + sphere.radius},
+  };
 }
 
 } // namespace mrl

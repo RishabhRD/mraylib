@@ -107,7 +107,7 @@ void real_img() {
   auto rand = random_generator(sch);
 
   mrl::aspect_ratio_t ratio{16, 9};
-  auto img_width = 1000;
+  auto img_width = 400;
   auto img_height = mrl::image_height(ratio, img_width);
   mrl::in_memory_image img{img_width, img_height};
   mrl::camera_t camera{
