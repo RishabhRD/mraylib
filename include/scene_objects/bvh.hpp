@@ -48,11 +48,15 @@ public:
     std::optional<hit_record_t> res;
     auto hit_obj = [&r, &interval, rand, &res](object_type const &obj) {
       auto hit_rec = hit(obj, r, interval, rand);
-      if (res && hit_rec) {
-        *res = std::min(*res, *hit_rec,
-                        [](hit_record_t const &a, hit_record_t const &b) {
-                          return a.t < b.t;
-                        });
+      if (hit_rec) {
+        if (res) {
+          *res = std::min(*res, *hit_rec,
+                          [](hit_record_t const &a, hit_record_t const &b) {
+                            return a.t < b.t;
+                          });
+        } else {
+          res = hit_rec;
+        }
       }
     };
     tree.for_each_if(
