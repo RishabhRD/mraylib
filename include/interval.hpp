@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <ostream>
 namespace mrl {
 // represents [min, max]
 struct interval_t {
@@ -17,6 +18,11 @@ struct interval_t {
 
   constexpr bool surrounds(double x) const { return min < x && x < max; }
 };
+
+inline std::ostream &operator<<(std::ostream &os, interval_t const &rng) {
+  os << "{ min: " << rng.min << " , max: " << rng.max << " }";
+  return os;
+}
 
 constexpr static interval_t empty_interval{};
 

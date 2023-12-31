@@ -5,12 +5,20 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
+#include <ostream>
+
 namespace mrl {
 struct bound_t {
   interval_t x_range;
   interval_t y_range;
   interval_t z_range;
 };
+
+inline std::ostream &operator<<(std::ostream &os, bound_t const &bound) {
+  os << "{ x_range: " << bound.x_range << " , y_range: " << bound.y_range
+     << " , z_range: " << bound.z_range << " }";
+  return os;
+}
 
 namespace __details {
 constexpr auto inf = std::numeric_limits<double>::infinity();
@@ -24,9 +32,11 @@ constexpr std::optional<interval_t> time_range(double a, double b,
   }
   auto t1 = (range.min - a) / b;
   auto t2 = (range.max - a) / b;
-  if (t2 < 0)
+  auto min = std::min(t1, t2);
+  auto max = std::max(t1, t2);
+  if (max < 0)
     return std::nullopt;
-  return interval_t{std::max(t1, 0.0), t2};
+  return interval_t{std::max(min, 0.0), std::max(max, 0.0)};
 }
 }; // namespace __details
 
