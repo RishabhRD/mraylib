@@ -44,4 +44,20 @@ constexpr bool hit_bounds(ray_t const &ray, bound_t const &bounds) {
   }
   return false;
 }
+
+constexpr bound_t union_bounds(bound_t const &a, bound_t const &b) {
+  interval_t x_range{
+      std::min(a.x_range.min, b.x_range.min),
+      std::max(a.x_range.max, b.x_range.max),
+  };
+  interval_t y_range{
+      std::min(a.y_range.min, b.y_range.min),
+      std::max(a.y_range.max, b.y_range.max),
+  };
+  interval_t z_range{
+      std::min(a.z_range.min, b.z_range.min),
+      std::max(a.z_range.max, b.z_range.max),
+  };
+  return {x_range, y_range, z_range};
+}
 } // namespace mrl

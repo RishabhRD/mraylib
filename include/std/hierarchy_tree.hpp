@@ -8,7 +8,9 @@
 #include <variant>
 
 namespace mrl {
-template <typename BoundType, typename ValueType> class hierarchy_tree {
+template <typename ValueType, typename BoundType, typename GetBounds,
+          typename UnionBounds>
+class hierarchy_tree {
 public:
   using bound_type = BoundType;
   using value_type = ValueType;
@@ -19,23 +21,23 @@ private:
   using tree_type = btree<data_type>;
   using node = typename tree_type::node;
   using node_ptr = typename tree_type::node_ptr;
+  [[no_unique_address]] GetBounds get_bounds;
+  [[no_unique_address]] UnionBounds union_bounds;
   tree_type internal_tree;
 
 public:
-  template <std::ranges::forward_range Range, typename F,
-            std::invocable<bound_type, bound_type> Union>
-    requires std::same_as<std::invoke_result_t<Union, bound_type, bound_type>,
-                          bound_type>
-  hierarchy_tree(Range &&rng, F &&f, Union &&union_bounds) {
+  template <std::ranges::forward_range Range>
+  hierarchy_tree(Range &&rng, GetBounds get_bounds_,
+                 UnionBounds &&union_bounds_)
+      : get_bounds(std::move(get_bounds_)),
+        union_bounds(std::move(union_bounds_)) {
 
     if constexpr (std::is_rvalue_reference_v<Range>) {
-      internal_tree.root = build_tree_move(
-          std::ranges::begin(rng), std::ranges::end(rng), std::forward<F>(f),
-          std::forward<Union>(union_bounds));
+      internal_tree.root =
+          build_tree_move(std::ranges::begin(rng), std::ranges::end(rng));
     } else {
       internal_tree.root =
-          build_tree(std::ranges::begin(rng), std::ranges::end(rng),
-                     std::forward<F>(f), std::forward<Union>(union_bounds));
+          build_tree(std::ranges::begin(rng), std::ranges::end(rng));
     }
   }
 
@@ -44,22 +46,30 @@ public:
              std::invocable<Predicate, bound_type const &> &&
              std::same_as<std::invoke_result_t<Predicate, bound_type const &>,
                           bool>
-  void for_each_if(F &&f, Predicate &&satisfy_bounds) {
+  void for_each_if(F &&f, Predicate &&satisfy_bounds) const {
     for_each_if(internal_tree.root, std::forward<F>(f),
                 std::forward<Predicate>(satisfy_bounds));
   }
 
   template <typename F>
     requires std::invocable<F, data_type const &>
-  void for_each_if(F &&f) {
+  void for_each_if(F &&f) const {
     for_each_if(std::forward<F>(f), always(true));
   }
 
+  bound_type const &bounds() const {
+    auto const &data = internal_tree.root->data;
+    return std::visit(
+        overload{
+            [](bound_type const &bound) { return bound; },
+            [this](value_type const &value) { return get_bounds(value); },
+        },
+        data);
+  }
+
 private:
-  template <std::forward_iterator BeginIter, std::forward_iterator EndIter,
-            typename F, typename Union>
-  node_ptr build_tree(BeginIter begin, EndIter end, F &&get_bounds,
-                      Union &&bound_union) {
+  template <std::forward_iterator BeginIter, std::forward_iterator EndIter>
+  node_ptr build_tree(BeginIter begin, EndIter end) {
     namespace rng = std::ranges;
     if (begin == end)
       return nullptr;
@@ -70,17 +80,15 @@ private:
     auto const mid = std::next(begin, n / 2);
     auto bound_left = get_bounds(rng::subrange(begin, mid));
     auto bound_right = get_bounds(rng::subrange(mid, end));
-    auto bounds = bound_union(std::move(bound_left), std::move(bound_right));
+    auto bounds = union_bounds(std::move(bound_left), std::move(bound_right));
     auto left = build_tree(begin, mid);
     auto right = build_tree(mid, end);
     return make_btree_node(std::move(bounds), left, right);
   }
 
   // TODO: Some better way to say I want to move without duplicating code
-  template <std::forward_iterator BeginIter, std::forward_iterator EndIter,
-            typename F, typename Union>
-  node_ptr build_tree_move(BeginIter begin, EndIter end, F &&get_bounds,
-                           Union &&bound_union) {
+  template <std::forward_iterator BeginIter, std::forward_iterator EndIter>
+  node_ptr build_tree_move(BeginIter begin, EndIter end) {
     namespace rng = std::ranges;
     if (begin == end)
       return nullptr;
@@ -91,7 +99,7 @@ private:
     auto const mid = std::next(begin, n / 2);
     auto bound_left = get_bounds(rng::subrange(begin, mid));
     auto bound_right = get_bounds(rng::subrange(mid, end));
-    auto bounds = bound_union(std::move(bound_left), std::move(bound_right));
+    auto bounds = union_bounds(std::move(bound_left), std::move(bound_right));
     auto left = build_tree_move(begin, mid);
     auto right = build_tree_move(mid, end);
     return make_btree_node(std::move(bounds), left, right);
