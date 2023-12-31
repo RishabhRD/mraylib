@@ -1,6 +1,13 @@
 #pragma once
 
 #include "bound.hpp"
+#include "generator/concepts.hpp"
+#include "generator/generator_view.hpp"
+#include "hit_record.hpp"
+#include "interval.hpp"
+#include "ray.hpp"
+#include "scene_objects/concepts.hpp"
+#include "scene_objects/scene_object_range.hpp"
 #include "std/hierarchy_tree.hpp"
 #include <ranges>
 
@@ -21,11 +28,48 @@ private:
   tree_type tree;
 
 public:
-  template <std::ranges::forward_range Range>
+  template <std::ranges::random_access_range Range>
   bvh_t(Range &&rng)
-      : tree(std::forward<Range>(rng), __bvh_details::get_bounds_obj,
-             __bvh_details::union_bounds_obj) {}
+      : tree([&rng] {
+          std::ranges::sort(rng, [](auto const &x, auto const &y) {
+            return get_bounds(x).x_range.min < get_bounds(y).x_range.min;
+          });
+          return tree_type(std::forward<Range>(rng),
+                           __bvh_details::get_bounds_obj,
+                           __bvh_details::union_bounds_obj);
+        }()) {}
 
-  bound_t get_bounds() const { return tree.bounds(); }
+  bound_t bounds() const { return tree.bounds(); }
+
+  template <DoubleGenerator Generator>
+  std::optional<hit_record_t> hit_ray(ray_t const &r,
+                                      interval_t const &interval,
+                                      generator_view<Generator> rand) const {
+    std::optional<hit_record_t> res;
+    auto hit_obj = [&r, &interval, rand, &res](object_type const &obj) {
+      auto hit_rec = hit(obj, r, interval, rand);
+      if (res && hit_rec) {
+        *res = std::min(*res, *hit_rec,
+                        [](hit_record_t const &a, hit_record_t const &b) {
+                          return a.t < b.t;
+                        });
+      }
+    };
+    tree.for_each_if(
+        hit_obj, [&r](bound_t const &bound) { return hit_bounds(r, bound); });
+    return res;
+  }
 };
+
+template <BoundedObject Object>
+inline bound_t get_bounds(bvh_t<Object> const &bvh) {
+  return bvh.bounds();
+}
+
+template <DoubleGenerator Generator, SceneObject<Generator> Object>
+inline std::optional<hit_record_t> hit(bvh_t<Object> const &bvh, ray_t const &r,
+                                       interval_t const &interval,
+                                       generator_view<Generator> rand) {
+  return bvh.hit_ray(r, interval, rand);
+}
 } // namespace mrl

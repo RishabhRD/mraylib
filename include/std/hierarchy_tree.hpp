@@ -27,8 +27,7 @@ private:
 
 public:
   template <std::ranges::forward_range Range>
-  hierarchy_tree(Range &&rng, GetBounds get_bounds_,
-                 UnionBounds &&union_bounds_)
+  hierarchy_tree(Range &&rng, GetBounds get_bounds_, UnionBounds union_bounds_)
       : get_bounds(std::move(get_bounds_)),
         union_bounds(std::move(union_bounds_)) {
 
@@ -74,7 +73,7 @@ private:
     if (begin == end)
       return nullptr;
     if (rng::next(begin) == end) {
-      return make_btree_node(*begin);
+      return make_btree_node(data_type{*begin});
     }
     auto const n = rng::distance(begin, end);
     auto const mid = std::next(begin, n / 2);
@@ -83,7 +82,8 @@ private:
     auto bounds = union_bounds(std::move(bound_left), std::move(bound_right));
     auto left = build_tree(begin, mid);
     auto right = build_tree(mid, end);
-    return make_btree_node(std::move(bounds), left, right);
+    return make_btree_node(data_type{std::move(bounds)}, std::move(left),
+                           std::move(right));
   }
 
   // TODO: Some better way to say I want to move without duplicating code
@@ -93,7 +93,7 @@ private:
     if (begin == end)
       return nullptr;
     if (rng::next(begin) == end) {
-      return make_btree_node(std::move(*begin));
+      return make_btree_node(data_type{std::move(*begin)});
     }
     auto const n = rng::distance(begin, end);
     auto const mid = std::next(begin, n / 2);
@@ -102,11 +102,11 @@ private:
     auto bounds = union_bounds(std::move(bound_left), std::move(bound_right));
     auto left = build_tree_move(begin, mid);
     auto right = build_tree_move(mid, end);
-    return make_btree_node(std::move(bounds), left, right);
+    return make_btree_node(data_type{std::move(bounds)}, left, right);
   }
 
   template <typename F, typename Predicate>
-  void for_each_if(node_ptr const &root, F f, Predicate pred) {
+  void for_each_if(node_ptr const &root, F f, Predicate pred) const {
     if (root == nullptr)
       return;
     auto const &data = root->data;

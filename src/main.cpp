@@ -15,6 +15,7 @@
 #include "pixel_sampler/delta_sampler.hpp"
 #include "point.hpp"
 #include "scene_objects/any_scene_object.hpp"
+#include "scene_objects/bvh.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/scene_object_range.hpp"
 #include "scene_objects/shapes/sphere.hpp"
@@ -155,10 +156,11 @@ void real_img() {
     }
   }
 
+  mrl::bvh_t<any_object> bvh{std::move(world)};
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};
   std::ofstream os(path, std::ios::out);
   mrl::img_renderer_t renderer(camera, camera_orientation, sch);
-  stdexec::sync_wait(renderer.render(world, img));
+  stdexec::sync_wait(renderer.render(bvh, img));
   mrl::write_ppm_img(os, img);
 }
 
