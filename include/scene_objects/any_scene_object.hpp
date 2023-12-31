@@ -30,6 +30,7 @@ private:
     virtual std::optional<hit_record_t>
     hit_mem(ray_t const &, interval_t const &,
             generator_view<Generator> rand) const = 0;
+    virtual bound_t get_bounds_mem() const = 0;
   };
 
   template <SceneObject<Generator> T> struct model_t final : concept_t {
@@ -41,8 +42,11 @@ private:
             generator_view<Generator> rand) const override {
       return hit(hittable, ray, t_rng, rand);
     }
+
+    bound_t get_bounds_mem() const override { return get_bounds(hittable); }
   };
 
+public:
   std::shared_ptr<concept_t const> self_;
 };
 
@@ -50,4 +54,9 @@ template <DoubleGenerator Generator>
 std::optional<hit_record_t> hit(any_scene_object<Generator> const &,
                                 ray_t const &, interval_t const &,
                                 generator_view<Generator>);
+
+template <DoubleGenerator Generator>
+bound_t get_bounds(any_scene_object<Generator> const &obj) {
+  return obj.self_->get_bounds_mem();
+}
 } // namespace mrl

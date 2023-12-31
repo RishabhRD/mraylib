@@ -15,6 +15,7 @@
 #include "pixel_sampler/delta_sampler.hpp"
 #include "point.hpp"
 #include "scene_objects/any_scene_object.hpp"
+#include "scene_objects/bvh.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/scene_object_range.hpp"
 #include "scene_objects/shapes/sphere.hpp"
@@ -107,7 +108,7 @@ void real_img() {
   auto rand = random_generator(sch);
 
   mrl::aspect_ratio_t ratio{16, 9};
-  auto img_width = 1000;
+  auto img_width = 400;
   auto img_height = mrl::image_height(ratio, img_width);
   mrl::in_memory_image img{img_width, img_height};
   mrl::camera_t camera{
@@ -155,10 +156,11 @@ void real_img() {
     }
   }
 
+  mrl::bvh_t<any_object> bvh{std::move(world)};
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};
   std::ofstream os(path, std::ios::out);
   mrl::img_renderer_t renderer(camera, camera_orientation, sch);
-  stdexec::sync_wait(renderer.render(world, img));
+  stdexec::sync_wait(renderer.render(bvh, img));
   mrl::write_ppm_img(os, img);
 }
 

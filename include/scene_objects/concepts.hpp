@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bound.hpp"
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
 #include "hit_record.hpp"
@@ -24,6 +25,11 @@ concept Hittable =
       } -> std::same_as<std::optional<hit_record_t>>;
     };
 
+template <typename Object>
+concept BoundedObject = requires(Object const &obj) {
+  { get_bounds(obj) } -> std::same_as<bound_t>;
+};
+
 template <typename Object, typename Generator>
-concept SceneObject = Hittable<Object, Generator>;
+concept SceneObject = Hittable<Object, Generator> && BoundedObject<Object>;
 } // namespace mrl

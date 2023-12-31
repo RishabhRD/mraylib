@@ -32,4 +32,22 @@ hit(SceneObjectRange const &obj, ray_t const &ray, interval_t const &t_rng,
   else
     return *min_iter;
 }
+
+template <std::ranges::input_range BoundedObjectRange>
+  requires BoundedObject<std::ranges::range_value_t<BoundedObjectRange>>
+constexpr bound_t get_bounds(BoundedObjectRange const &rng) {
+  bound_t res;
+  for (auto const &obj : rng) {
+    auto cur = get_bounds(obj);
+    res.x_range.min = std::min(res.x_range.min, cur.x_range.min);
+    res.x_range.max = std::max(res.x_range.max, cur.x_range.max);
+
+    res.y_range.min = std::min(res.y_range.min, cur.y_range.min);
+    res.y_range.max = std::max(res.y_range.max, cur.y_range.max);
+
+    res.z_range.min = std::min(res.z_range.min, cur.z_range.min);
+    res.z_range.max = std::max(res.z_range.max, cur.z_range.max);
+  }
+  return res;
+}
 } // namespace mrl
