@@ -204,10 +204,11 @@ struct img_renderer_t {
         rendering_depth(rendering_depth_), sampler{std::move(sampler_)} {}
 
   img_renderer_t(camera_t camera_, camera_orientation_t camera_orientation_,
-                 scheduler_t scheduler_, int rendering_depth_ = 100,
+                 scheduler_t scheduler_, unsigned long random_seed = 0,
+                 int rendering_depth_ = 100,
                  Sampler sampler_ = delta_sampler(50))
       : img_renderer_t(std::move(camera_), std::move(camera_orientation_),
-                       scheduler_, random_generator(scheduler_),
+                       scheduler_, random_generator(scheduler_, random_seed),
                        rendering_depth_, std::move(sampler_)) {}
 
   template <SceneObject<random_generator_t> Object, RandomAccessImage Image>

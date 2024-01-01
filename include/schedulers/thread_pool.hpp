@@ -360,8 +360,9 @@ struct __thread_pool_details::operation
   }
 };
 
-inline auto random_generator(mrl::thread_pool_scheduler) {
-  return mrl::thread_local_random_double_generator{};
+inline auto random_generator(mrl::thread_pool_scheduler,
+                             unsigned long random_seed) {
+  return mrl::thread_local_random_double_generator{random_seed};
 }
 
 namespace __thread_pool_bulk {

@@ -7,7 +7,7 @@ namespace mrl {
 template <Scheduler scheduler_t>
 using scheduler_random_generator_t =
     std::remove_cvref_t<decltype(random_generator(
-        std::declval<scheduler_t>()))>;
+        std::declval<scheduler_t>(), std::declval<unsigned long>()))>;
 
 template <Scheduler scheduler_t>
 using any_object_t =

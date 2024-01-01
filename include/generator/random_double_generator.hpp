@@ -8,6 +8,7 @@ private:
   std::mt19937 generator;
 
 public:
+  random_double_generator(unsigned long seed) : generator(seed) {}
   // Precondition:
   //   - min < max
   //

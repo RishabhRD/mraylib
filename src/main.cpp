@@ -26,6 +26,7 @@
 #include "schedulers/type_traits.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
+#include <chrono>
 #include <cstdlib>
 #include <exec/async_scope.hpp>
 #include <fstream>
@@ -105,10 +106,12 @@ void real_img() {
   auto sch = thread_pool.get_scheduler();
   using any_object = mrl::any_object_t<decltype(sch)>;
 
-  auto rand = random_generator(sch);
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+  auto rand = random_generator(sch, cur_time);
 
   mrl::aspect_ratio_t ratio{16, 9};
-  auto img_width = 400;
+  auto img_width = 1000;
   auto img_height = mrl::image_height(ratio, img_width);
   mrl::in_memory_image img{img_width, img_height};
   mrl::camera_t camera{
@@ -159,7 +162,7 @@ void real_img() {
   mrl::bvh_t<any_object> bvh{std::move(world)};
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};
   std::ofstream os(path, std::ios::out);
-  mrl::img_renderer_t renderer(camera, camera_orientation, sch);
+  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
   stdexec::sync_wait(renderer.render(bvh, img));
   mrl::write_ppm_img(os, img);
 }
