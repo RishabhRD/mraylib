@@ -9,18 +9,29 @@
 #include "normal.hpp"
 #include "point.hpp"
 #include "ray.hpp"
+#include "textures/concepts.hpp"
+#include "textures/solid_color.hpp"
 #include "textures/texture_coord.hpp"
 #include "vector.hpp"
 #include <optional>
 
 namespace mrl {
-struct lambertian_t {
-  color_t albedo;
+template <typename Texture> struct lambertian_t {
+  using texture_t = Texture;
+  texture_t albedo;
+
+  lambertian_t(texture_t texture) : albedo(std::move(texture)) {}
+
+  lambertian_t(color_t color)
+      : albedo(std::move(texture::solid_color{color})) {}
 };
+
+template <typename Texture> lambertian_t(Texture) -> lambertian_t<Texture>;
+lambertian_t(color_t texture) -> lambertian_t<texture::solid_color>;
 
 constexpr std::optional<scatter_record_t>
 lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
-                   point3 hit_point, texture_coord_t, direction_t normal,
+                   point3 hit_point, direction_t normal,
                    direction_t const &random_dir) {
   normal = normal_dir(normal, in_ray.direction);
   auto scatter_dir = normal.val() + random_dir.val();
@@ -37,11 +48,13 @@ lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
   };
 }
 
-template <DoubleGenerator Generator>
-constexpr auto scatter(lambertian_t const &material, ray_t const &in_ray,
-                       point3 const &hit_point, direction_t const &normal,
-                       generator_view<Generator> rand) {
-  return lambertian_scatter(material.albedo, in_ray, hit_point, normal,
+template <DoubleGenerator Generator, Texture<Generator> texture_t>
+constexpr auto
+scatter(lambertian_t<texture_t> const &material, ray_t const &in_ray,
+        point3 const &hit_point, texture_coord_t const &texture_coord,
+        direction_t const &normal, generator_view<Generator> rand) {
+  auto color = texture_color(material.albedo, texture_coord, hit_point, rand);
+  return lambertian_scatter(color, in_ray, hit_point, normal,
                             direction_generator{}(rand));
 }
 

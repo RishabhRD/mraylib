@@ -12,9 +12,9 @@ struct solid_color {
 };
 
 template <DoubleGenerator Generator>
-constexpr color_t color_value(solid_color const &texture,
-                              texture_coord_t const &, point3 const &,
-                              generator_view<Generator>) {
+constexpr color_t texture_color(solid_color const &texture,
+                                texture_coord_t const &, point3 const &,
+                                generator_view<Generator>) {
   return texture.color;
 }
 } // namespace texture
