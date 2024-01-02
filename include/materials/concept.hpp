@@ -13,7 +13,7 @@ namespace mrl {
 template <typename T, typename Generator>
 concept Material =
     DoubleGenerator<Generator> &&
-    requires(T &material, ray_t const &ray, point3 const &hit_point,
+    requires(T const &material, ray_t const &ray, point3 const &hit_point,
              texture_coord_t const &coord, vec3 const &normal,
              generator_view<Generator> rand) {
       // Precondition:
