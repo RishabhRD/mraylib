@@ -133,22 +133,32 @@ void earth() {
       .defocus_angle = mrl::degrees(0),
   };
   mrl::camera_orientation_t camera_orientation{
-      .look_from = mrl::point3{7, 0, -12},
-      .look_at = mrl::point3{0, 0, 0},
+      .look_from = mrl::point3{0, 0, 0},
+      .look_at = mrl::point3{0, 0, 15},
       .up_dir = mrl::direction_t{0, 1, 0},
   };
 
-  auto earth_img = mrl::stb_image{"data/globe.jpeg"};
+  auto earth_img = mrl::stb_image{"data/earthmap.jpg"};
   auto earth_texture = mrl::texture::image_texture{std::move(earth_img)};
   auto earth_surface = mrl::lambertian_t{std::move(earth_texture)};
   auto globe =
-      mrl::sphere_obj_t{2, mrl::point3{0, 0, 0}, std::move(earth_surface)};
+      mrl::sphere_obj_t{2, mrl::point3{0, 0, 15}, std::move(earth_surface)};
+
+  // auto space_img = mrl::stb_image{"data/space.jpeg"};
+  // auto space_texture = mrl::texture::image_texture{std::move(space_img)};
+  // auto space_surface = mrl::lambertian_t{std::move(space_texture)};
+  // auto space =
+  //     mrl::sphere_obj_t{10, mrl::point3{0, 0, 50}, std::move(space_surface)};
+
+  std::vector<decltype(globe)> world;
+  world.push_back(std::move(globe));
+  // world.push_back(std::move(space));
 
   mrl::in_memory_image img{img_width, img_height};
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};
   std::ofstream os(path, std::ios::out);
   mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
-  stdexec::sync_wait(renderer.render(globe, img));
+  stdexec::sync_wait(renderer.render(world, img));
   mrl::write_ppm_img(os, img);
 }
 
