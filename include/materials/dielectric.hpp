@@ -8,6 +8,7 @@
 #include "normal.hpp"
 #include "point.hpp"
 #include "ray.hpp"
+#include "textures/texture_coord.hpp"
 #include "vector.hpp"
 #include <cmath>
 #include <optional>
@@ -53,8 +54,8 @@ struct dielectric {
 //   - normal points to outside of object from hit_point
 template <DoubleGenerator Generator>
 constexpr auto scatter(dielectric const &material, ray_t const &in_ray,
-                       point3 const &hit_point, direction_t normal,
-                       generator_view<Generator> rand) {
+                       point3 const &hit_point, texture_coord_t,
+                       direction_t normal, generator_view<Generator> rand) {
   auto refractive_index = material.refractive_index;
   color_t attenuation{1.0, 1.0, 1.0};
   auto ray_from_outside = is_normal_away_from_ray(normal, in_ray.direction);

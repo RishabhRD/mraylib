@@ -24,6 +24,8 @@
 #include "schedulers/thread_pool.hpp"
 #include "schedulers/type_traits.hpp"
 #include "std/ranges.hpp"
+#include "textures/checker_texture.hpp"
+#include "textures/solid_color.hpp"
 #include "vector.hpp"
 #include <chrono>
 #include <cstdlib>
@@ -33,7 +35,7 @@
 #include <iostream>
 #include <stdexec/execution.hpp>
 
-void real_img() {
+void random_spheres() {
   auto const num_threads = std::thread::hardware_concurrency();
   auto thread_pool = mrl::thread_pool{num_threads};
   auto sch = thread_pool.get_scheduler();
@@ -64,9 +66,14 @@ void real_img() {
   mrl::lambertian_t mat2(mrl::color_t{0.4, 0.2, 0.1});
   mrl::metal_t mat3(mrl::color_t{0.7, 0.6, 0.5});
 
+  auto checker = mrl::lambertian_t{mrl::texture::checker{
+      0.32, mrl::texture::solid_color{mrl::from_rgb(38, 39, 41)},
+      mrl::texture::solid_color{mrl::color_t{.9, .9, .9}}}};
+
   world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{0, 1, 0}, mat1});
   world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{-4, 1, 0}, mat2});
   world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{4, 1, 0}, mat3});
+  world.push_back(mrl::sphere_obj_t{1000.0, mrl::point3{0, -1000, 0}, checker});
 
   for (int a = -11; a < 11; ++a) {
     for (int b = -11; b < 11; ++b) {
@@ -100,4 +107,4 @@ void real_img() {
   mrl::write_ppm_img(os, img);
 }
 
-int main() { real_img(); }
+int main() { random_spheres(); }
