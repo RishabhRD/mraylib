@@ -9,6 +9,7 @@
 #include "normal.hpp"
 #include "point.hpp"
 #include "ray.hpp"
+#include "textures/texture_coord.hpp"
 #include "vector.hpp"
 #include <optional>
 
@@ -19,7 +20,7 @@ struct lambertian_t {
 
 constexpr std::optional<scatter_record_t>
 lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
-                   point3 hit_point, direction_t normal,
+                   point3 hit_point, texture_coord_t, direction_t normal,
                    direction_t const &random_dir) {
   normal = normal_dir(normal, in_ray.direction);
   auto scatter_dir = normal.val() + random_dir.val();

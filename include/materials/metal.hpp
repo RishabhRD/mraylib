@@ -9,6 +9,7 @@
 #include "materials/scatter_record.hpp"
 #include "normal.hpp"
 #include "ray.hpp"
+#include "textures/texture_coord.hpp"
 #include "vector.hpp"
 #include <optional>
 
@@ -20,7 +21,7 @@ struct metal_t {
 template <DoubleGenerator Generator>
 constexpr std::optional<scatter_record_t>
 scatter(metal_t const &material, ray_t const &in_ray, point3 const &hit_point,
-        direction_t normal, generator_view<Generator>) {
+        texture_coord_t, direction_t normal, generator_view<Generator>) {
   normal = normal_dir(normal, in_ray.direction);
   auto ray_dir = reflection_dir(in_ray.direction, normal);
   ray_t scattered_ray{.origin = hit_point, .direction = ray_dir};
@@ -38,7 +39,7 @@ struct fuzzy_metal_t {
 template <DoubleGenerator Generator>
 constexpr std::optional<scatter_record_t>
 scatter(fuzzy_metal_t const &material, ray_t const &in_ray,
-        point3 const &hit_point, direction_t normal,
+        point3 const &hit_point, texture_coord_t, direction_t normal,
         generator_view<Generator> rand) {
   normal = normal_dir(normal, in_ray.direction);
   auto ray_dir = reflection_dir(in_ray.direction, normal);

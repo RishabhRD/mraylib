@@ -9,6 +9,7 @@
 #include "materials/concept.hpp"
 #include "point.hpp"
 #include "ray.hpp"
+#include "textures/texture_coord.hpp"
 #include "vector.hpp"
 #include <cmath>
 #include <optional>
@@ -30,6 +31,8 @@ template <typename material_t> struct sphere_obj_t {
 
 template <typename material_t>
 sphere_obj_t(double, point3, material_t) -> sphere_obj_t<material_t>;
+
+namespace __sphere_details {
 
 // Postcondition:
 //   - Returns the least possible t if any
@@ -60,6 +63,15 @@ constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
   return p - obj.center;
 }
 
+constexpr texture_coord_t calc_texture_coord(point3 const &hit_point) {
+  constexpr static double pi = 3.1414;
+  auto theta = acos(-hit_point.y);
+  auto phi = atan2(-hit_point.z, hit_point.x) + pi;
+
+  return {phi / (2 * pi), theta / pi};
+}
+} // namespace __sphere_details
+
 // Postcondition:
 //   - If ray doesn't intersect then return nullopt
 //   - t should be the minimum possible value for which ray intersects object
@@ -69,15 +81,17 @@ template <DoubleGenerator Generator, Material<Generator> material_t>
 constexpr std::optional<hit_record_t>
 hit(sphere_obj_t<material_t> const &obj, ray_t const &r,
     interval_t const &interval, generator_view<Generator> rand) {
-  auto t_opt = hit_t(obj, r, interval);
+  auto t_opt = __sphere_details::hit_t(obj, r, interval);
   return t_opt.transform([&obj, &r, rand](double t) {
     auto point = r.at(t);
-    auto normal = calc_normal(obj, point);
+    auto normal = __sphere_details::calc_normal(obj, point);
     return hit_record_t{
         .t = t,
         .hit_point = point,
         .normal = normal,
-        .scattering = scatter(obj.material, r, point, normal, rand),
+        .scattering =
+            scatter(obj.material, r, point,
+                    __sphere_details::calc_texture_coord(point), normal, rand),
     };
   });
 }
