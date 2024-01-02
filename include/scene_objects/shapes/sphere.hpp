@@ -63,10 +63,10 @@ constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
   return p - obj.center;
 }
 
-constexpr texture_coord_t calc_texture_coord(point3 const &hit_point) {
-  constexpr static double pi = 3.1414;
-  auto theta = acos(-hit_point.y);
-  auto phi = atan2(-hit_point.z, hit_point.x) + pi;
+constexpr texture_coord_t calc_texture_coord(vec3 const &normal) {
+  constexpr static double pi = 3.1415926535897932385;
+  auto theta = acos(-normal.y);
+  auto phi = atan2(-normal.z, normal.x) + pi;
 
   return {phi / (2 * pi), theta / pi};
 }
@@ -89,9 +89,9 @@ hit(sphere_obj_t<material_t> const &obj, ray_t const &r,
         .t = t,
         .hit_point = point,
         .normal = normal,
-        .scattering =
-            scatter(obj.material, r, point,
-                    __sphere_details::calc_texture_coord(point), normal, rand),
+        .scattering = scatter(
+            obj.material, r, point,
+            __sphere_details::calc_texture_coord(normal.val()), normal, rand),
     };
   });
 }

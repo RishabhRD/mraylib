@@ -24,7 +24,6 @@
 #include <functional>
 #include <limits>
 #include <ranges>
-#include <stdexec/__detail/__execution_fwd.hpp>
 #include <stdexec/execution.hpp>
 #include <type_traits>
 
@@ -40,15 +39,15 @@ struct rendering_context_t {
   vec3 camera_position;
 };
 
-constexpr std::pair<vec3, vec3>
-viewport_direction(camera_orientation_t const &o) {
-  auto right = normalize(cross(o.direction.val(), o.up_dir.val()));
-  return {right, -o.up_dir.val()};
+constexpr std::pair<vec3, vec3> viewport_direction(direction_t camera_dir,
+                                                   direction_t up_dir) {
+  auto right = normalize(cross(camera_dir.val(), up_dir.val()));
+  return {right, -up_dir.val()};
 }
 
-constexpr vec3 viewport_topleft(vec3 right, vec3 down,
-                                camera_orientation_t const &o, double f) {
-  return o.position + o.direction.val() * f - right / 2 - down / 2;
+constexpr vec3 viewport_topleft(vec3 right, vec3 down, point3 camera_pos,
+                                direction_t camera_dir, double f) {
+  return camera_pos + camera_dir.val() * f - right / 2 - down / 2;
 }
 
 template <DoubleGenerator Generator, SceneObject<Generator> Object>
@@ -100,7 +99,7 @@ constexpr color_t sampled_ray_color(RayOriginGenerator &gen_center,
   return color / num_ele;
 }
 
-template <Camera camera_t, RandomAccessImage Image>
+template <Camera camera_t, OutputRandomAccessImage Image>
 constexpr auto build_rendering_context(Image &img, camera_t const &camera,
                                        camera_orientation_t const &orientation,
                                        int rendering_depth) {
@@ -109,15 +108,16 @@ constexpr auto build_rendering_context(Image &img, camera_t const &camera,
   auto viewport_height = 2 * h * focus_dist;
   auto viewport_width =
       viewport_height * (static_cast<double>(width(img)) / height(img));
-  auto [u_dir, v_dir] = viewport_direction(orientation);
+  auto camera_dir = direction_t{orientation.look_at - orientation.look_from};
+  auto [u_dir, v_dir] = viewport_direction(camera_dir, orientation.up_dir);
   auto viewport_u = u_dir * viewport_width;
   auto viewport_v = v_dir * viewport_height;
 
   auto pixel_delta_u = viewport_u / width(img);
   auto pixel_delta_v = viewport_v / height(img);
 
-  auto viewport_top_left =
-      viewport_topleft(viewport_u, viewport_v, orientation, focus_dist);
+  auto viewport_top_left = viewport_topleft(
+      viewport_u, viewport_v, orientation.look_from, camera_dir, focus_dist);
 
   auto pixel00_loc = viewport_top_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
@@ -132,7 +132,7 @@ constexpr auto build_rendering_context(Image &img, camera_t const &camera,
       .defocus_disk_u = defocus_disk_u,
       .defocus_disk_v = defocus_disk_v,
       .rendering_depth = rendering_depth,
-      .camera_position = orientation.position,
+      .camera_position = orientation.look_from,
   };
 }
 
@@ -159,7 +159,7 @@ constexpr auto generate_pixel(int row, int col, Object const &world,
                            world, ctx.rendering_depth, rand);
 }
 
-template <Camera camera_t, RandomAccessImage Image, Scheduler scheduler_t,
+template <Camera camera_t, OutputRandomAccessImage Image, Scheduler scheduler_t,
           DoubleGenerator random_t, SceneObject<random_t> Object,
           PixelSampler<random_t> Sampler>
 constexpr auto
@@ -211,7 +211,8 @@ struct img_renderer_t {
                        scheduler_, random_generator(scheduler_, random_seed),
                        rendering_depth_, std::move(sampler_)) {}
 
-  template <SceneObject<random_generator_t> Object, RandomAccessImage Image>
+  template <SceneObject<random_generator_t> Object,
+            OutputRandomAccessImage Image>
   constexpr auto render(Object const &world, Image &img) {
     return render_image(world, img, camera, camera_orientation, sampler,
                         rendering_depth, scheduler, generator_view{gen});

@@ -18,11 +18,11 @@ inline auto convert_to_ppm_str(color_t color) {
 template <RandomAccessImage Image>
 void write_ppm_img(std::ostream &os, Image const &img) {
   os << "P3\n";
-  os << img.width() << ' ' << img.height() << '\n';
+  os << width(img) << ' ' << height(img) << '\n';
   os << "\n255\n";
-  for (int j = 0; j < img.height(); ++j) {
-    for (int i = 0; i < img.width(); ++i) {
-      write_ppm_color_str(os, img.at(j, i));
+  for (int j = 0; j < height(img); ++j) {
+    for (int i = 0; i < width(img); ++i) {
+      write_ppm_color_str(os, pixel_at(img, j, i));
     }
   }
 }

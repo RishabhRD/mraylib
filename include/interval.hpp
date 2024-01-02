@@ -29,4 +29,12 @@ constexpr static interval_t empty_interval{};
 constexpr static interval_t universe{-std::numeric_limits<double>::infinity(),
                                      std::numeric_limits<double>::infinity()};
 
+constexpr double clamp(interval_t const &interval, double x) {
+  if (x < interval.min)
+    return interval.min;
+  if (x > interval.max)
+    return interval.max;
+  return x;
+}
+
 } // namespace mrl

@@ -4,8 +4,11 @@
 #include "camera/camera_orientation.hpp"
 #include "color.hpp"
 #include "direction.hpp"
+#include "image/concepts.hpp"
 #include "image/in_memory_image.hpp"
 #include "image/ppm/ppm_utils.hpp"
+#include "image/solid_color_image.hpp"
+#include "image/stb_image.hpp"
 #include "image_renderer.hpp"
 #include "materials/concept.hpp"
 #include "materials/dielectric.hpp"
@@ -25,6 +28,7 @@
 #include "schedulers/type_traits.hpp"
 #include "std/ranges.hpp"
 #include "textures/checker_texture.hpp"
+#include "textures/image_texture.hpp"
 #include "textures/solid_color.hpp"
 #include "vector.hpp"
 #include <chrono>
@@ -34,6 +38,13 @@
 #include <ios>
 #include <iostream>
 #include <stdexec/execution.hpp>
+
+#define TH_POOL                                                                \
+  auto const num_threads = std::thread::hardware_concurrency();                \
+  auto thread_pool = mrl::thread_pool{num_threads};                            \
+  auto sch = thread_pool.get_scheduler();
+
+#define INLINE auto sch = mrl::inline_scheduler{};
 
 void random_spheres() {
   auto const num_threads = std::thread::hardware_concurrency();
@@ -56,8 +67,8 @@ void random_spheres() {
   };
 
   mrl::camera_orientation_t camera_orientation{
-      .position = {13, 2, 3},
-      .direction = mrl::point3(0, 0, 0) - mrl::point3(13, 2, 3),
+      .look_from = {13, 2, 3},
+      .look_at = mrl::point3(0, 0, 0),
       .up_dir = mrl::direction_t{0, 1, 0},
   };
 
@@ -107,4 +118,38 @@ void random_spheres() {
   mrl::write_ppm_img(os, img);
 }
 
-int main() { random_spheres(); }
+void earth() {
+  TH_POOL
+
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+
+  auto img_width = 1000;
+  mrl::aspect_ratio_t ratio{16, 9};
+  auto img_height = mrl::image_height(ratio, img_width);
+  mrl::camera_t camera{
+      .focus_distance = 10.0,
+      .vertical_fov = mrl::degrees(20),
+      .defocus_angle = mrl::degrees(0),
+  };
+  mrl::camera_orientation_t camera_orientation{
+      .look_from = mrl::point3{7, 0, -12},
+      .look_at = mrl::point3{0, 0, 0},
+      .up_dir = mrl::direction_t{0, 1, 0},
+  };
+
+  auto earth_img = mrl::stb_image{"data/globe.jpeg"};
+  auto earth_texture = mrl::texture::image_texture{std::move(earth_img)};
+  auto earth_surface = mrl::lambertian_t{std::move(earth_texture)};
+  auto globe =
+      mrl::sphere_obj_t{2, mrl::point3{0, 0, 0}, std::move(earth_surface)};
+
+  mrl::in_memory_image img{img_width, img_height};
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
+  std::ofstream os(path, std::ios::out);
+  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
+  stdexec::sync_wait(renderer.render(globe, img));
+  mrl::write_ppm_img(os, img);
+}
+
+int main() { earth(); }

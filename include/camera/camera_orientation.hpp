@@ -5,8 +5,8 @@
 
 namespace mrl {
 struct camera_orientation_t {
-  point3 position;
-  direction_t direction;
+  point3 look_from;
+  point3 look_at;
   // Precondition: up_dir is perpendicular to direction
   direction_t up_dir;
 };
