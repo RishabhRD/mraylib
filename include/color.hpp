@@ -74,11 +74,7 @@ constexpr color_t operator/(color_t a, double b) { return a /= b; }
 // Precondition:
 //   - r, g, b >= 0 && r, g, b <= 255
 constexpr color_t from_rgb(int r, int g, int b) {
-  if (r == 0 && g == 0 && b == 0)
-    return {0, 0, 0};
-  vec3 tmp = normalize(vec3{static_cast<double>(r), static_cast<double>(g),
-                            static_cast<double>(b)});
-  return {tmp.x, tmp.y, tmp.z};
+  return {double(r) / 255.0, double(g) / 255.0, double(b) / 255.0};
 }
 
 constexpr std::tuple<int, int, int> to_rgb(color_t color) {
