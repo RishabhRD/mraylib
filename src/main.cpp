@@ -118,6 +118,22 @@ void random_spheres() {
   mrl::write_ppm_img(os, img);
 }
 
+void img() {
+  auto space_img = mrl::stb_image{"data/space.jpg"};
+  auto const img_width = width(space_img);
+  auto const img_height = height(space_img);
+  std::cerr << img_width << ' ' << img_height << std::endl;
+  mrl::in_memory_image img{img_width, img_height};
+  for (int y = 0; y < img_height; ++y) {
+    for (int x = 0; x < img_width; ++x) {
+      set_pixel_at(img, x, y, pixel_at(space_img, x, y));
+    }
+  }
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
+  std::ofstream os(path, std::ios::out);
+  mrl::write_ppm_img(os, img);
+}
+
 void earth() {
   TH_POOL
 
@@ -144,15 +160,15 @@ void earth() {
   auto globe =
       mrl::sphere_obj_t{2, mrl::point3{0, 0, 15}, std::move(earth_surface)};
 
-  // auto space_img = mrl::stb_image{"data/space.jpeg"};
-  // auto space_texture = mrl::texture::image_texture{std::move(space_img)};
-  // auto space_surface = mrl::lambertian_t{std::move(space_texture)};
-  // auto space =
-  //     mrl::sphere_obj_t{10, mrl::point3{0, 0, 50}, std::move(space_surface)};
+  auto space_img = mrl::stb_image{"data/space.jpg"};
+  auto space_texture = mrl::texture::image_texture{std::move(space_img)};
+  auto space_surface = mrl::lambertian_t{std::move(space_texture)};
+  auto space =
+      mrl::sphere_obj_t{10, mrl::point3{0, 0, 25}, std::move(space_surface)};
 
-  std::vector<decltype(globe)> world;
+  std::vector<decltype(space)> world;
   world.push_back(std::move(globe));
-  // world.push_back(std::move(space));
+  world.push_back(std::move(space));
 
   mrl::in_memory_image img{img_width, img_height};
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};

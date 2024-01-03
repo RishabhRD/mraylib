@@ -15,12 +15,12 @@ public:
       : width_(width), height_(height),
         pixels(static_cast<std::size_t>(width_ * height_)) {}
 
-  color_t &at(int row, int col) {
-    return pixels[static_cast<std::size_t>(row * width_ + col)];
+  color_t &at(int x, int y) {
+    return pixels[static_cast<std::size_t>(y * width_ + x)];
   }
 
-  color_t const &at(int row, int col) const {
-    return pixels[static_cast<std::size_t>(row * width_ + col)];
+  color_t const &at(int x, int y) const {
+    return pixels[static_cast<std::size_t>(y * width_ + x)];
   }
 
   constexpr int width() const { return width_; }

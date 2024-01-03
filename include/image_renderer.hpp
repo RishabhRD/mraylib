@@ -172,10 +172,10 @@ render_image(Object const &world, Image &img, camera_t const &camera,
 
   auto set_pixel_at_coord = [&img, &world, rendering_ctx, sampler,
                              rand](auto coord) {
-    auto row = coord / width(img);
-    auto col = coord % width(img);
-    auto color = generate_pixel(row, col, world, rendering_ctx, sampler, rand);
-    set_pixel_at(img, row, col, color);
+    auto x = coord % width(img);
+    auto y = coord / width(img);
+    auto color = generate_pixel(y, x, world, rendering_ctx, sampler, rand);
+    set_pixel_at(img, x, y, color);
   };
 
   return stdexec::schedule(scheduler) |

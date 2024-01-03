@@ -20,9 +20,9 @@ void write_ppm_img(std::ostream &os, Image const &img) {
   os << "P3\n";
   os << width(img) << ' ' << height(img) << '\n';
   os << "\n255\n";
-  for (int j = 0; j < height(img); ++j) {
-    for (int i = 0; i < width(img); ++i) {
-      write_ppm_color_str(os, pixel_at(img, j, i));
+  for (int y = 0; y < height(img); ++y) {
+    for (int x = 0; x < width(img); ++x) {
+      write_ppm_color_str(os, pixel_at(img, x, y));
     }
   }
 }
