@@ -7,7 +7,6 @@
 #include "point.hpp"
 #include "textures/texture_coord.hpp"
 namespace mrl {
-namespace texture {
 template <RandomAccessImage Image> struct image_texture {
   using image_t = Image;
   image_t image;
@@ -28,5 +27,4 @@ constexpr color_t texture_color(image_texture<Image> const &texture,
   auto j = static_cast<int>(coord.v * height(texture.image));
   return pixel_at(texture.image, i, j);
 }
-} // namespace texture
 } // namespace mrl

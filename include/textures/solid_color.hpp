@@ -6,16 +6,14 @@
 #include "point.hpp"
 #include "textures/texture_coord.hpp"
 namespace mrl {
-namespace texture {
-struct solid_color {
+struct solid_color_texture {
   color_t color;
 };
 
 template <DoubleGenerator Generator>
-constexpr color_t texture_color(solid_color const &texture,
+constexpr color_t texture_color(solid_color_texture const &texture,
                                 texture_coord_t const &, point3 const &,
                                 generator_view<Generator>) {
   return texture.color;
 }
-} // namespace texture
 } // namespace mrl

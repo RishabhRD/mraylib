@@ -29,6 +29,7 @@
 #include "std/ranges.hpp"
 #include "textures/checker_texture.hpp"
 #include "textures/image_texture.hpp"
+#include "textures/perlin_texture.hpp"
 #include "textures/solid_color.hpp"
 #include "vector.hpp"
 #include <chrono>
@@ -77,9 +78,9 @@ void random_spheres() {
   mrl::lambertian_t mat2(mrl::color_t{0.4, 0.2, 0.1});
   mrl::metal_t mat3(mrl::color_t{0.7, 0.6, 0.5});
 
-  auto checker = mrl::lambertian_t{mrl::texture::checker{
-      0.32, mrl::texture::solid_color{mrl::from_rgb(38, 39, 41)},
-      mrl::texture::solid_color{mrl::color_t{.9, .9, .9}}}};
+  auto checker = mrl::lambertian_t{mrl::checker_texture{
+      0.32, mrl::solid_color_texture{mrl::from_rgb(38, 39, 41)},
+      mrl::solid_color_texture{mrl::color_t{.9, .9, .9}}}};
 
   world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{0, 1, 0}, mat1});
   world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{-4, 1, 0}, mat2});
@@ -131,7 +132,7 @@ void img() {
   }
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};
   std::ofstream os(path, std::ios::out);
-  mrl::write_ppm_img(os, img);
+  mrl::write_ppm_img_without_gamma(os, img);
 }
 
 void earth() {
@@ -155,13 +156,13 @@ void earth() {
   };
 
   auto earth_img = mrl::stb_image{"data/earthmap.jpg"};
-  auto earth_texture = mrl::texture::image_texture{std::move(earth_img)};
+  auto earth_texture = mrl::image_texture{std::move(earth_img)};
   auto earth_surface = mrl::lambertian_t{std::move(earth_texture)};
   auto globe =
       mrl::sphere_obj_t{2, mrl::point3{0, 0, 15}, std::move(earth_surface)};
 
   auto space_img = mrl::stb_image{"data/space.jpg"};
-  auto space_texture = mrl::texture::image_texture{std::move(space_img)};
+  auto space_texture = mrl::image_texture{std::move(space_img)};
   auto space_surface = mrl::lambertian_t{std::move(space_texture)};
   auto space =
       mrl::sphere_obj_t{10, mrl::point3{0, 0, 25}, std::move(space_surface)};
@@ -175,7 +176,43 @@ void earth() {
   std::ofstream os(path, std::ios::out);
   mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
   stdexec::sync_wait(renderer.render(world, img));
+  mrl::write_ppm_img_without_gamma(os, img);
+}
+
+void perlin_spheres() {
+  TH_POOL
+
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+
+  auto img_width = 1000;
+  mrl::aspect_ratio_t ratio{16, 9};
+  auto img_height = mrl::image_height(ratio, img_width);
+  mrl::camera_t camera{
+      .focus_distance = 10.0,
+      .vertical_fov = mrl::degrees(20),
+      .defocus_angle = mrl::degrees(0),
+  };
+  mrl::camera_orientation_t camera_orientation{
+      .look_from = mrl::point3{13, 2, 3},
+      .look_at = mrl::point3{0, 0, 0},
+      .up_dir = mrl::direction_t{0, 1, 0},
+  };
+
+  mrl::perlin_texture texture{mrl::solid_color_texture{0.6, 0.4, 0.1},
+                              mrl::perlin_noise{cur_time}};
+  mrl::lambertian_t material{texture};
+  mrl::sphere_obj_t big_sphere{1000, mrl::point3{0, -1000, 0}, material};
+  mrl::sphere_obj_t small_sphere{2, mrl::point3{0, 2, 0}, material};
+
+  std::vector world{big_sphere, small_sphere};
+
+  mrl::in_memory_image img{img_width, img_height};
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
+  std::ofstream os(path, std::ios::out);
+  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
+  stdexec::sync_wait(renderer.render(world, img));
   mrl::write_ppm_img(os, img);
 }
 
-int main() { earth(); }
+int main() { perlin_spheres(); }

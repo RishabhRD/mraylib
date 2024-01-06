@@ -22,12 +22,11 @@ template <typename Texture> struct lambertian_t {
 
   lambertian_t(texture_t texture) : albedo(std::move(texture)) {}
 
-  lambertian_t(color_t color)
-      : albedo(std::move(texture::solid_color{color})) {}
+  lambertian_t(color_t color) : albedo(std::move(solid_color_texture{color})) {}
 };
 
 template <typename Texture> lambertian_t(Texture) -> lambertian_t<Texture>;
-lambertian_t(color_t texture) -> lambertian_t<texture::solid_color>;
+lambertian_t(color_t texture) -> lambertian_t<solid_color_texture>;
 
 constexpr std::optional<scatter_record_t>
 lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
