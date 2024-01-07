@@ -73,7 +73,7 @@ public:
           random_vec[perm_x[(i + di) & 255] ^ perm_y[(j + dj) & 255] ^
                      perm_z[(k + dk) & 255]];
     }
-    return perlin_interpolate(cube, u, v, w);
+    return 0.5 * (1.0 + perlin_interpolate(cube, u, v, w));
   }
 
 private:
@@ -103,7 +103,7 @@ template <DoubleGenerator Generator, Texture<Generator> texture_t>
 color_t texture_color(perlin_texture<texture_t> const &texture,
                       texture_coord_t const coord, point3 const &hit_point,
                       generator_view<Generator> rand) {
-  return texture_color(texture.internal_texture, coord, hit_point, rand) * 0.5 *
-         (1.0 + texture.noise(texture.scale * hit_point));
+  return texture_color(texture.internal_texture, coord, hit_point, rand) *
+         texture.noise(texture.scale * hit_point);
 }
 } // namespace mrl
