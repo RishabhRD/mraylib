@@ -9,8 +9,10 @@
 #include "textures/concepts.hpp"
 #include "textures/texture_coord.hpp"
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <random>
+#include <ranges>
 #include <vector>
 
 namespace mrl {
@@ -34,10 +36,21 @@ public:
   // Postcondition:
   //   - A random noise between [0, 1)
   constexpr double operator()(point3 const &p) const {
-    auto i = (static_cast<std::size_t>(p.x * 4)) & 255;
-    auto j = (static_cast<std::size_t>(p.y * 4)) & 255;
-    auto k = (static_cast<std::size_t>(p.z * 4)) & 255;
-    return random_doubles[perm_x[i] ^ perm_y[j] ^ perm_z[k]];
+    auto u = hermite_cube(p.x - std::floor(p.x));
+    auto v = hermite_cube(p.y - std::floor(p.y));
+    auto w = hermite_cube(p.z - std::floor(p.z));
+    auto i = static_cast<int>(std::floor(p.x));
+    auto j = static_cast<int>(std::floor(p.y));
+    auto k = static_cast<int>(std::floor(p.z));
+    namespace vw = std::views;
+    double cube[2][2][2];
+    for (auto [di, dj, dk] : vw::cartesian_product(
+             vw::iota(0, 2), vw::iota(0, 2), vw::iota(0, 2))) {
+      cube[di][dj][dk] =
+          random_doubles[perm_x[(i + di) & 255] ^ perm_y[(j + dj) & 255] ^
+                         perm_z[(k + dk) & 255]];
+    }
+    return tri_interpolate(cube, u, v, w);
   }
 
 private:
@@ -52,19 +65,22 @@ template <typename Texture> struct perlin_texture {
   using texture_t = Texture;
   texture_t internal_texture;
   perlin_noise noise;
+  double scale;
 
-  constexpr perlin_texture(texture_t texture_, perlin_noise noise_)
-      : internal_texture(std::move(texture_)), noise(std::move(noise_)) {}
+  constexpr perlin_texture(texture_t texture_, perlin_noise noise_,
+                           double scale_)
+      : internal_texture(std::move(texture_)), noise(std::move(noise_)),
+        scale(scale_) {}
 };
 
 template <typename Texture>
-perlin_texture(Texture, perlin_noise) -> perlin_texture<Texture>;
+perlin_texture(Texture, perlin_noise, double) -> perlin_texture<Texture>;
 
 template <DoubleGenerator Generator, Texture<Generator> texture_t>
 color_t texture_color(perlin_texture<texture_t> const &texture,
                       texture_coord_t const coord, point3 const &hit_point,
                       generator_view<Generator> rand) {
   return texture_color(texture.internal_texture, coord, hit_point, rand) *
-         texture.noise(hit_point);
+         texture.noise(texture.scale * hit_point);
 }
 } // namespace mrl
