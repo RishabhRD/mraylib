@@ -57,8 +57,8 @@ public:
   perlin_noise(unsigned long seed) : mrl::perlin_noise(std::mt19937(seed)) {}
 
   // Postcondition:
-  //   - A random noise between [0, 1)
-  constexpr double operator()(point3 const &p) const {
+  //   - A random noise between [-1, 1)
+  constexpr double noise_at(point3 const &p) const {
     auto u = p.x - std::floor(p.x);
     auto v = p.y - std::floor(p.y);
     auto w = p.z - std::floor(p.z);
@@ -73,7 +73,23 @@ public:
           random_vec[perm_x[(i + di) & 255] ^ perm_y[(j + dj) & 255] ^
                      perm_z[(k + dk) & 255]];
     }
-    return 0.5 * (1.0 + perlin_interpolate(cube, u, v, w));
+    return perlin_interpolate(cube, u, v, w);
+  }
+
+  // Postcondition:
+  //   - A random noise between [-1, 1)
+  constexpr double turbulance_at(point3 const &p, int depth = 7) const {
+    auto accum = 0.0;
+    auto temp_p = p;
+    auto weight = 1.0;
+
+    for (int i = 0; i < depth; i++) {
+      accum += weight * noise_at(temp_p);
+      weight *= 0.5;
+      temp_p *= 2;
+    }
+
+    return std::fabs(accum);
   }
 
 private:
@@ -103,7 +119,8 @@ template <DoubleGenerator Generator, Texture<Generator> texture_t>
 color_t texture_color(perlin_texture<texture_t> const &texture,
                       texture_coord_t const coord, point3 const &hit_point,
                       generator_view<Generator> rand) {
-  return texture_color(texture.internal_texture, coord, hit_point, rand) *
-         texture.noise(texture.scale * hit_point);
+  auto s = texture.scale * hit_point;
+  return texture_color(texture.internal_texture, coord, hit_point, rand) * 0.5 *
+         (1 + std::sin(s.z + 10 * texture.noise.turbulance_at(s)));
 }
 } // namespace mrl
