@@ -81,4 +81,17 @@ constexpr bound_t pad_bounds(bound_t bound) {
                                                  : expand(bound.z_range, delta);
   return bound;
 }
+
+// Precondition:
+//   - given points represents diagonally opposite to each other
+//
+// Postcondition:
+//   - return a bound_box according to given points
+constexpr bound_t bound_from_diagonal_points(point3 a, point3 b) {
+  return bound_t{
+      interval_t(fmin(a.x, b.x), fmax(a.x, b.x)),
+      interval_t(fmin(a.y, b.y), fmax(a.y, b.y)),
+      interval_t(fmin(a.z, b.z), fmax(a.z, b.z)),
+  };
+}
 } // namespace mrl
