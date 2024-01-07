@@ -37,4 +37,12 @@ constexpr double clamp(interval_t const &interval, double x) {
   return x;
 }
 
+constexpr interval_t expand(interval_t i, double delta) {
+  auto padding = delta / 2;
+  i.min -= padding;
+  i.max += padding;
+  return i;
+}
+
+constexpr double size(interval_t const &i) { return i.max - i.min; }
 } // namespace mrl

@@ -70,4 +70,15 @@ constexpr bound_t union_bounds(bound_t const &a, bound_t const &b) {
   };
   return {x_range, y_range, z_range};
 }
+
+constexpr bound_t pad_bounds(bound_t bound) {
+  constexpr static double delta = 0.0001;
+  bound.x_range = (size(bound.x_range) >= delta) ? bound.x_range
+                                                 : expand(bound.x_range, delta);
+  bound.y_range = (size(bound.y_range) >= delta) ? bound.y_range
+                                                 : expand(bound.y_range, delta);
+  bound.z_range = (size(bound.z_range) >= delta) ? bound.z_range
+                                                 : expand(bound.z_range, delta);
+  return bound;
+}
 } // namespace mrl

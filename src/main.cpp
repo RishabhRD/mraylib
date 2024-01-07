@@ -181,6 +181,7 @@ void earth() {
 
 void perlin_spheres() {
   TH_POOL
+  ANY;
 
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
@@ -199,13 +200,19 @@ void perlin_spheres() {
       .up_dir = mrl::direction_t{0, 1, 0},
   };
 
+  auto earth_img = mrl::stb_image{"data/human.jpeg"};
+  auto earth_texture = mrl::image_texture{std::move(earth_img)};
   mrl::perlin_texture texture{mrl::solid_color_texture{0.78, 0.4, 0.1},
                               mrl::perlin_noise{cur_time}, 4};
+  mrl::perlin_texture small_texture{std::move(earth_texture),
+                                    mrl::perlin_noise{cur_time}, 4};
   mrl::lambertian_t material{texture};
+  mrl::lambertian_t small_material{std::move(small_texture)};
   mrl::sphere_obj_t big_sphere{1000, mrl::point3{0, -1000, 0}, material};
-  mrl::sphere_obj_t small_sphere{2, mrl::point3{0, 2, 0}, material};
+  mrl::sphere_obj_t small_sphere{2, mrl::point3{0, 2, 0},
+                                 std::move(small_material)};
 
-  std::vector world{big_sphere, small_sphere};
+  std::vector<any_object> world{big_sphere, std::move(small_sphere)};
 
   mrl::in_memory_image img{img_width, img_height};
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};
