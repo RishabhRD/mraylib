@@ -47,11 +47,11 @@
 
 #define INLINE auto sch = mrl::inline_scheduler{};
 
+#define ANY using any_object = mrl::any_object_t<decltype(sch)>;
+
 void random_spheres() {
-  auto const num_threads = std::thread::hardware_concurrency();
-  auto thread_pool = mrl::thread_pool{num_threads};
-  auto sch = thread_pool.get_scheduler();
-  using any_object = mrl::any_object_t<decltype(sch)>;
+  TH_POOL
+  ANY;
 
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
@@ -199,7 +199,7 @@ void perlin_spheres() {
       .up_dir = mrl::direction_t{0, 1, 0},
   };
 
-  mrl::perlin_texture texture{mrl::solid_color_texture{1, 1, 1},
+  mrl::perlin_texture texture{mrl::solid_color_texture{0.78, 0.4, 0.1},
                               mrl::perlin_noise{cur_time}, 4};
   mrl::lambertian_t material{texture};
   mrl::sphere_obj_t big_sphere{1000, mrl::point3{0, -1000, 0}, material};
