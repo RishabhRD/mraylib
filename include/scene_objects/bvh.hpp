@@ -65,6 +65,9 @@ public:
   }
 };
 
+template <std::ranges::random_access_range Range>
+bvh_t(Range &&rng) -> bvh_t<std::ranges::range_value_t<Range>>;
+
 template <BoundedObject Object>
 inline bound_t get_bounds(bvh_t<Object> const &bvh) {
   return bvh.bounds();

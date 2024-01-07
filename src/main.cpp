@@ -20,6 +20,7 @@
 #include "scene_objects/bvh.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/scene_object_range.hpp"
+#include "scene_objects/shapes/quad.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
@@ -222,4 +223,55 @@ void perlin_spheres() {
   mrl::write_ppm_img(os, img);
 }
 
-int main() { perlin_spheres(); }
+void quads() {
+  TH_POOL
+  ANY;
+
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+
+  mrl::lambertian_t left_red{mrl::color_t(1.0, 0.2, 0.2)};
+  mrl::lambertian_t back_green{mrl::color_t(0.2, 1.0, 0.2)};
+  mrl::lambertian_t right_blue{mrl::color_t(0.2, 0.2, 1.0)};
+  mrl::lambertian_t upper_orange{mrl::color_t(1.0, 0.5, 0.0)};
+  mrl::lambertian_t lower_teal{mrl::color_t(0.2, 0.8, 0.8)};
+
+  std::vector world{
+      mrl::quad_obj_t{mrl::point3(-3, -2, 5), mrl::vec3(0, 0, -4),
+                      mrl::vec3(0, 4, 0), left_red},
+      mrl::quad_obj_t{mrl::point3(-2, -2, 0), mrl::vec3(4, 0, 0),
+                      mrl::vec3(0, 4, 0), back_green},
+      mrl::quad_obj_t{mrl::point3(3, -2, 1), mrl::vec3(0, 0, 4),
+                      mrl::vec3(0, 4, 0), right_blue},
+      mrl::quad_obj_t{mrl::point3(-2, 3, 1), mrl::vec3(4, 0, 0),
+                      mrl::vec3(0, 0, 4), upper_orange},
+      mrl::quad_obj_t{mrl::point3(-2, -3, 5), mrl::vec3(4, 0, 0),
+                      mrl::vec3(0, 0, -4), lower_teal},
+  };
+
+  auto img_width = 1000;
+  mrl::aspect_ratio_t ratio{1, 1};
+  auto img_height = mrl::image_height(ratio, img_width);
+  mrl::camera_t camera{
+      .focus_distance = 10,
+      .vertical_fov = mrl::degrees(80),
+      .defocus_angle = mrl::degrees(0),
+  };
+  mrl::camera_orientation_t camera_orientation{
+      .look_from = mrl::point3{0, 0, 9},
+      .look_at = mrl::point3{0, 0, 0},
+      .up_dir = mrl::direction_t{0, 1, 0},
+  };
+
+  // TODO: this should compile without any_object
+  mrl::bvh_t<any_object> bvh{std::move(world)};
+
+  mrl::in_memory_image img{img_width, img_height};
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
+  std::ofstream os(path, std::ios::out);
+  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
+  stdexec::sync_wait(renderer.render(bvh, img));
+  mrl::write_ppm_img(os, img);
+}
+
+int main() { quads(); }
