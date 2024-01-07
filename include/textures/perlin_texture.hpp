@@ -2,30 +2,53 @@
 
 #include "color.hpp"
 #include "generator/concepts.hpp"
+#include "generator/direction_generator.hpp"
 #include "generator/generator_view.hpp"
 #include "generator/random_double_generator.hpp"
 #include "point.hpp"
 #include "std/algorithm.hpp"
 #include "textures/concepts.hpp"
 #include "textures/texture_coord.hpp"
+#include "vector.hpp"
 #include <algorithm>
 #include <cmath>
-#include <functional>
 #include <random>
 #include <ranges>
 #include <vector>
 
 namespace mrl {
+// Postcondition:
+//   - Returns perlin interpolation of (u, v, w) in c
+constexpr double perlin_interpolate(vec3 c[2][2][2], double u, double v,
+                                    double w) {
+  auto uu = hermite_cube(u);
+  auto vv = hermite_cube(v);
+  auto ww = hermite_cube(w);
+  auto accum = 0.0;
+
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++) {
+        vec3 weight_v(u - i, v - j, w - k);
+        accum += (i * uu + (1 - i) * (1 - uu)) * (j * vv + (1 - j) * (1 - vv)) *
+                 (k * ww + (1 - k) * (1 - ww)) * dot(c[i][j][k], weight_v);
+      }
+
+  return accum;
+}
+
 class perlin_noise {
 public:
   template <typename URBG>
   constexpr perlin_noise(URBG random_generator)
-      : random_doubles(num_points), perm_x(num_points), perm_y(num_points),
+      : random_vec(num_points), perm_x(num_points), perm_y(num_points),
         perm_z(num_points) {
-    auto gen_double = std::bind_front(
-        mrl::basic_random_double_generator{random_generator}, 0, 1);
-    std::generate(std::begin(random_doubles), std::end(random_doubles),
-                  gen_double);
+
+    auto gen_double = mrl::basic_random_double_generator{random_generator};
+    auto gen_vec = [&gen_double] {
+      return direction_generator{}(generator_view{gen_double}).val();
+    };
+    std::generate(std::begin(random_vec), std::end(random_vec), gen_vec);
     random_permutation(std::begin(perm_x), std::end(perm_x), random_generator);
     random_permutation(std::begin(perm_y), std::end(perm_y), random_generator);
     random_permutation(std::begin(perm_z), std::end(perm_z), random_generator);
@@ -36,26 +59,26 @@ public:
   // Postcondition:
   //   - A random noise between [0, 1)
   constexpr double operator()(point3 const &p) const {
-    auto u = hermite_cube(p.x - std::floor(p.x));
-    auto v = hermite_cube(p.y - std::floor(p.y));
-    auto w = hermite_cube(p.z - std::floor(p.z));
+    auto u = p.x - std::floor(p.x);
+    auto v = p.y - std::floor(p.y);
+    auto w = p.z - std::floor(p.z);
     auto i = static_cast<int>(std::floor(p.x));
     auto j = static_cast<int>(std::floor(p.y));
     auto k = static_cast<int>(std::floor(p.z));
     namespace vw = std::views;
-    double cube[2][2][2];
+    vec3 cube[2][2][2];
     for (auto [di, dj, dk] : vw::cartesian_product(
              vw::iota(0, 2), vw::iota(0, 2), vw::iota(0, 2))) {
       cube[di][dj][dk] =
-          random_doubles[perm_x[(i + di) & 255] ^ perm_y[(j + dj) & 255] ^
-                         perm_z[(k + dk) & 255]];
+          random_vec[perm_x[(i + di) & 255] ^ perm_y[(j + dj) & 255] ^
+                     perm_z[(k + dk) & 255]];
     }
-    return tri_interpolate(cube, u, v, w);
+    return perlin_interpolate(cube, u, v, w);
   }
 
 private:
   constexpr static std::size_t num_points = 256;
-  std::vector<double> random_doubles;
+  std::vector<vec3> random_vec;
   std::vector<std::size_t> perm_x;
   std::vector<std::size_t> perm_y;
   std::vector<std::size_t> perm_z;
@@ -80,7 +103,7 @@ template <DoubleGenerator Generator, Texture<Generator> texture_t>
 color_t texture_color(perlin_texture<texture_t> const &texture,
                       texture_coord_t const coord, point3 const &hit_point,
                       generator_view<Generator> rand) {
-  return texture_color(texture.internal_texture, coord, hit_point, rand) *
-         texture.noise(texture.scale * hit_point);
+  return texture_color(texture.internal_texture, coord, hit_point, rand) * 0.5 *
+         (1.0 + texture.noise(texture.scale * hit_point));
 }
 } // namespace mrl

@@ -17,25 +17,6 @@ constexpr void random_permutation(Iter begin, Iter end, Generator &&gen) {
   std::shuffle(begin, end, gen);
 }
 
-// Postcondition:
-//   - Returns a tri-interpolation of the point (u, v, w) in cube
-constexpr double tri_interpolate(double cube[2][2][2], double u, double v,
-                                 double w) {
-  double accum{0.0};
-  for (int i_{0}; i_ < 2; ++i_) {
-    for (int j_{0}; j_ < 2; ++j_) {
-      for (int k_{0}; k_ < 2; ++k_) {
-        auto i = static_cast<double>(i_);
-        auto j = static_cast<double>(j_);
-        auto k = static_cast<double>(k_);
-        accum += (i * u + (1 - i) * (1 - u)) * (j * v + (1 - j) * (1 - v)) *
-                 (k * w + (1 - k) * (1 - w)) * cube[i_][j_][k_];
-      }
-    }
-  }
-  return accum;
-}
-
 // TODO: is_arithmetic_v is only for builtin types
 // but there is no reason for not supporting matrix like type
 //
