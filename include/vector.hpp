@@ -1,5 +1,6 @@
 #pragma once
 
+#include "angle.hpp"
 #include "utils/double_utils.hpp"
 #include <cmath>
 #include <concepts>
@@ -89,5 +90,41 @@ constexpr vec3 normalize(vec3 const &v) { return unit_vector(v); }
 constexpr bool near_zero(vec3 const &v) {
   constexpr static auto s = 1e-8;
   return std::fabs(v.x) < s && std::fabs(v.y) < s && std::fabs(v.z) < s;
+}
+
+constexpr vec3 rotate_x(vec3 const &vector, angle_t angle) {
+  double angle_rad = radians(angle);
+  double cos_a = std::cos(angle_rad);
+  double sin_a = std::sin(angle_rad);
+
+  return {
+      vector.x,
+      cos_a * vector.y - sin_a * vector.z,
+      sin_a * vector.y + cos_a * vector.z,
+  };
+}
+
+constexpr vec3 rotate_y(vec3 const &vector, angle_t angle) {
+  double angle_rad = radians(angle);
+  double cos_a = cos(angle_rad);
+  double sin_a = sin(angle_rad);
+
+  return {
+      cos_a * vector.x + sin_a * vector.z,
+      vector.y,
+      sin_a * vector.x - cos_a * vector.z,
+  };
+}
+
+constexpr vec3 rotate_z(vec3 const &vector, angle_t angle) {
+  double angle_rad = radians(angle);
+  double cos_a = cos(angle_rad);
+  double sin_a = sin(angle_rad);
+
+  return {
+      cos_a * vector.x - sin_a * vector.y,
+      sin_a * vector.x + cos_a * vector.y,
+      vector.z,
+  };
 }
 } // namespace mrl
