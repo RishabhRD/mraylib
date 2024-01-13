@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hit_record.hpp"
+#include "hit_context.hpp"
 #include "ray.hpp"
 #include <optional>
 
@@ -13,7 +13,7 @@ public:
   ref_hook(Hook &h) : hook(&h) {}
 
   constexpr void invoke_hit(ray_t const &ray,
-                            std::optional<hit_record_t> const &rec) const {
+                            std::optional<hit_context_t> const &rec) const {
     hook->invoke_hit(ray, rec);
   }
 };

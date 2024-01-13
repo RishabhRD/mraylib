@@ -6,9 +6,9 @@
 #include "generator/generator_view.hpp"
 #include "generator/random_double_generator.hpp"
 #include "point.hpp"
+#include "scale_2d.hpp"
 #include "std/algorithm.hpp"
 #include "textures/concepts.hpp"
-#include "textures/texture_coord.hpp"
 #include "vector.hpp"
 #include <algorithm>
 #include <cmath>
@@ -117,7 +117,7 @@ perlin_texture(Texture, perlin_noise, double) -> perlin_texture<Texture>;
 
 template <DoubleGenerator Generator, Texture<Generator> texture_t>
 color_t texture_color(perlin_texture<texture_t> const &texture,
-                      texture_coord_t const coord, point3 const &hit_point,
+                      scale_2d_t const coord, point3 const &hit_point,
                       generator_view<Generator> rand) {
   auto s = texture.scale * hit_point;
   return texture_color(texture.internal_texture, coord, hit_point, rand) * 0.5 *

@@ -3,7 +3,7 @@
 #include "bound.hpp"
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
-#include "hit_record.hpp"
+#include "hit_context.hpp"
 #include "interval.hpp"
 #include "ray.hpp"
 #include <optional>
@@ -22,7 +22,7 @@ concept Hittable =
       //   - normal should always point outside of object
       {
         hit(obj, ray, interval, gen)
-      } -> std::same_as<std::optional<hit_record_t>>;
+      } -> std::same_as<std::optional<hit_context_t>>;
     };
 
 template <typename Object>

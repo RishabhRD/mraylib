@@ -3,12 +3,11 @@
 #include "direction.hpp"
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
+#include "hit_info.hpp"
 #include "light.hpp"
-#include "materials/scatter_record.hpp"
+#include "materials/scatter_info.hpp"
 #include "normal.hpp"
-#include "point.hpp"
 #include "ray.hpp"
-#include "textures/texture_coord.hpp"
 #include "vector.hpp"
 #include <cmath>
 #include <optional>
@@ -54,10 +53,11 @@ struct dielectric {
 //   - normal points to outside of object from hit_point
 template <DoubleGenerator Generator>
 constexpr auto scatter(dielectric const &material, ray_t const &in_ray,
-                       point3 const &hit_point, texture_coord_t,
-                       direction_t normal, generator_view<Generator> rand) {
+                       hit_info_t const &hit_info,
+                       generator_view<Generator> rand) {
   auto refractive_index = material.refractive_index;
   color_t attenuation{1.0, 1.0, 1.0};
+  auto normal = hit_info.outward_normal;
   auto ray_from_outside = is_normal_away_from_ray(normal, in_ray.direction);
   double refraction_ratio =
       ray_from_outside ? (1.0 / refractive_index) : refractive_index;
@@ -68,8 +68,8 @@ constexpr auto scatter(dielectric const &material, ray_t const &in_ray,
   auto out_ray_dir =
       __details::out_ray_dir(sin_theta, cos_theta, refraction_ratio,
                              rand(0.0, 1.0), in_ray.direction, normal);
-  return std::optional{scatter_record_t{
-      ray_t{hit_point, out_ray_dir},
+  return std::optional{scatter_info_t{
+      ray_t{hit_info.hit_point, out_ray_dir},
       attenuation,
   }};
 }

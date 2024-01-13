@@ -45,6 +45,11 @@ public:
     other.data = nullptr;
   }
 
+  stb_image &operator=(stb_image other) {
+    std::swap(*this, other);
+    return *this;
+  }
+
 private:
   int clamp(int x, int low, int high) const {
     if (x < low)
