@@ -288,16 +288,21 @@ void simple_light() {
       .up_dir = direction_t{0, 1, 0},
   };
 
+  auto earth_img = stb_image{"data/human.jpeg"};
+  auto earth_texture = image_texture{std::move(earth_img)};
+  auto earth_surface = lambertian_t{std::move(earth_texture)};
   perlin_texture texture{solid_color_texture{0.78, 0.4, 0.1},
                          perlin_noise{cur_time}, 4};
   lambertian_t material{texture};
-  diffuse_light light{color_t{4, 4, 4}};
+  diffuse_light light{color_t{1, 1, 1}, 20};
   shape_object big_sphere{sphere{1000, point3{0, -1000, 0}}, material};
-  shape_object small_sphere{sphere{2, point3{0, 2, 0}}, material};
+  shape_object small_sphere{sphere{2, point3{0, 2, 0}},
+                            std::move(earth_surface)};
   shape_object light_source{
-      quad{point3{3, 1, -2}, vec3{2, 0, 0}, vec3{0, 2, 0}}, light};
+      quad{point3{3, 1, -2}, vec3{2, 0, 0}, vec3{0, 3, 0}}, std::move(light)};
 
-  std::vector<any_object> world{big_sphere, small_sphere, light_source};
+  std::vector<any_object> world{big_sphere, std::move(small_sphere),
+                                std::move(light_source)};
 
   RENDER
 }

@@ -3,6 +3,7 @@
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
 #include "hit_info.hpp"
+#include "materials/emit_info.hpp"
 #include "materials/scatter_info.hpp"
 #include "ray.hpp"
 #include <optional>
@@ -24,6 +25,6 @@ concept LightEmitter = DoubleGenerator<Generator> &&
                                 generator_view<Generator> rand) {
                          {
                            emit(light, hit_info, rand)
-                         } -> std::same_as<std::optional<color_t>>;
+                         } -> std::same_as<std::optional<emit_info_t>>;
                        };
 } // namespace mrl
