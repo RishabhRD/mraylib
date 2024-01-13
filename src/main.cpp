@@ -274,4 +274,64 @@ void quads() {
   mrl::write_ppm_img(os, img);
 }
 
-int main() { quads(); }
+void ramayan() {
+  TH_POOL
+  ANY;
+
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+
+  auto ram_img = mrl::stb_image{"data/ram.jpg"};
+  auto ram_texture = mrl::image_texture{std::move(ram_img)};
+
+  auto hanuman_img = mrl::stb_image{"data/hanuman.jpg"};
+  auto hanuman_texture = mrl::image_texture{std::move(hanuman_img)};
+
+  auto garuna_img = mrl::stb_image{"data/garuna.png"};
+  auto garuna_texture = mrl::image_texture{std::move(garuna_img)};
+
+  auto jaishreeram_img = mrl::stb_image{"data/jaishreeram.png"};
+  auto jaishreeram_texture = mrl::image_texture{std::move(jaishreeram_img)};
+
+  mrl::lambertian_t hanuman{std::move(hanuman_texture)};
+  mrl::lambertian_t ram{std::move(ram_texture)};
+  mrl::lambertian_t garuna{std::move(garuna_texture)};
+  mrl::lambertian_t jaishreeram{std::move(jaishreeram_texture)};
+
+  std::vector<any_object> world{
+      mrl::quad_obj_t{mrl::point3(-8, -2, 4), mrl::vec3(-1, 0, -4),
+                      mrl::vec3(0, 4, 0), std::move(hanuman)},
+      mrl::quad_obj_t{mrl::point3(-9, -4, 0), mrl::vec3(18, 0, 0),
+                      mrl::vec3(0, 10, 0), std::move(ram)},
+      mrl::quad_obj_t{mrl::point3(8, -2, 1), mrl::vec3(0, 0, 4),
+                      mrl::vec3(0, 4, 0), std::move(garuna)},
+      mrl::quad_obj_t{mrl::point3(-3, -3, 5), mrl::vec3(6, 0, 0),
+                      mrl::vec3(0, 0.7, -1), std::move(jaishreeram)},
+  };
+
+  auto img_width = 3000;
+  mrl::aspect_ratio_t ratio{16, 9};
+  auto img_height = mrl::image_height(ratio, img_width);
+  mrl::camera_t camera{
+      .focus_distance = 10,
+      .vertical_fov = mrl::degrees(80),
+      .defocus_angle = mrl::degrees(0),
+  };
+  mrl::camera_orientation_t camera_orientation{
+      .look_from = mrl::point3{0, 0, 9},
+      .look_at = mrl::point3{0, 0, 0},
+      .up_dir = mrl::direction_t{0, 1, 0},
+  };
+
+  // TODO: this should compile without any_object
+  mrl::bvh_t<any_object> bvh{std::move(world)};
+
+  mrl::in_memory_image img{img_width, img_height};
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
+  std::ofstream os(path, std::ios::out);
+  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
+  stdexec::sync_wait(renderer.render(bvh, img));
+  mrl::write_ppm_img(os, img);
+}
+
+int main() { ramayan(); }
