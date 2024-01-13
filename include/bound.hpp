@@ -2,6 +2,7 @@
 
 #include "interval.hpp"
 #include "ray.hpp"
+#include "vector.hpp"
 #include <algorithm>
 #include <limits>
 #include <optional>
@@ -93,5 +94,12 @@ constexpr bound_t bound_from_diagonal_points(point3 a, point3 b) {
       interval_t(fmin(a.y, b.y), fmax(a.y, b.y)),
       interval_t(fmin(a.z, b.z), fmax(a.z, b.z)),
   };
+}
+
+constexpr bound_t shift(bound_t bound, vec3 offset) {
+  bound.x_range = shift(bound.x_range, offset.x);
+  bound.y_range = shift(bound.y_range, offset.y);
+  bound.z_range = shift(bound.z_range, offset.z);
+  return bound;
 }
 } // namespace mrl

@@ -19,6 +19,10 @@ struct interval_t {
   constexpr bool surrounds(double x) const { return min < x && x < max; }
 };
 
+constexpr auto shift(interval_t const &interval, double val) {
+  return interval_t{interval.min + val, interval.max + val};
+}
+
 inline std::ostream &operator<<(std::ostream &os, interval_t const &rng) {
   os << "{ min: " << rng.min << " , max: " << rng.max << " }";
   return os;

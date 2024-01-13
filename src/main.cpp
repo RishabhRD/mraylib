@@ -24,6 +24,7 @@
 #include "scene_objects/shapes/quad.hpp"
 #include "scene_objects/shapes/shape_object.hpp"
 #include "scene_objects/shapes/sphere.hpp"
+#include "scene_objects/translate_object.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
 #include "schedulers/static_thread_pool_scheduler.hpp"
@@ -317,33 +318,40 @@ void simple_light() {
   RENDER
 }
 
+auto box(point3 const &a, point3 const &b, auto material) {
+  std::vector<shape_object<quad, decltype(material)>> res;
+  auto min =
+      point3(std::fmin(a.x, b.x), std::fmin(a.y, b.y), std::fmin(a.z, b.z));
+  auto max =
+      point3(std::fmax(a.x, b.x), std::fmax(a.y, b.y), std::fmax(a.z, b.z));
+  auto dx = vec3(max.x - min.x, 0, 0);
+  auto dy = vec3(0, max.y - min.y, 0);
+  auto dz = vec3(0, 0, max.z - min.z);
+  res.push_back(
+      shape_object{quad{point3{min.x, min.y, max.z}, dx, dy}, material});
+  res.push_back(
+      shape_object{quad{point3{max.x, min.y, max.z}, -dz, dy}, material});
+  res.push_back(
+      shape_object{quad{point3{max.x, min.y, min.z}, -dx, dy}, material});
+  res.push_back(
+      shape_object{quad{point3{min.x, min.y, min.z}, dz, dy}, material});
+  res.push_back(
+      shape_object{quad{point3{min.x, max.y, max.z}, dx, -dz}, material});
+  res.push_back(
+      shape_object{quad{point3{min.x, min.y, min.z}, dx, dz}, material});
+  return res;
+}
+
+auto move_by(vec3 offset) {
+  return [offset](auto obj) {
+    return translate_object{std::move(obj), offset};
+  };
+}
+
 void cornell_box() {
   TH_POOL
   ANY;
 
-  auto box = [](point3 const &a, point3 const &b, auto material) {
-    std::vector<any_object> res;
-    auto min =
-        point3(std::fmin(a.x, b.x), std::fmin(a.y, b.y), std::fmin(a.z, b.z));
-    auto max =
-        point3(std::fmax(a.x, b.x), std::fmax(a.y, b.y), std::fmax(a.z, b.z));
-    auto dx = vec3(max.x - min.x, 0, 0);
-    auto dy = vec3(0, max.y - min.y, 0);
-    auto dz = vec3(0, 0, max.z - min.z);
-    res.push_back(
-        shape_object{quad{point3{min.x, min.y, max.z}, dx, dy}, material});
-    res.push_back(
-        shape_object{quad{point3{max.x, min.y, max.z}, -dz, dy}, material});
-    res.push_back(
-        shape_object{quad{point3{max.x, min.y, min.z}, -dx, dy}, material});
-    res.push_back(
-        shape_object{quad{point3{min.x, min.y, min.z}, dz, dy}, material});
-    res.push_back(
-        shape_object{quad{point3{min.x, max.y, max.z}, dx, -dz}, material});
-    res.push_back(
-        shape_object{quad{point3{min.x, min.y, min.z}, dx, dz}, material});
-    return res;
-  };
   auto background = color_t{0, 0, 0};
 
   auto cur_time = static_cast<unsigned long>(
@@ -381,10 +389,11 @@ void cornell_box() {
       quad{point3{555, 555, 555}, vec3{-555, 0, 0}, vec3{0, 0, -555}}, white});
   world.push_back(shape_object{
       quad{point3{0, 0, 555}, vec3{555, 0, 0}, vec3{0, 555, 0}}, white});
-  auto box1 = box(point3(130, 0, 65), point3(295, 165, 230), white);
-  auto box2 = box(point3(265, 0, 295), point3(430, 330, 460), white);
+  auto box1 = box(point3(265, 0, 295), point3(430, 330, 460), white);
+  auto box2 = box(point3(130, 0, 65), point3(295, 165, 230), white);
   world.insert(std::end(world), std::begin(box1), std::end(box1));
-  world.insert(std::end(world), std::begin(box2), std::end(box2));
+  std::transform(std::begin(box2), std::end(box2), std::back_inserter(world),
+                 move_by(vec3{0, 100, 0}));
 
   bvh_t<any_object> bvh{std::move(world)};
   in_memory_image img{img_width, img_height};
