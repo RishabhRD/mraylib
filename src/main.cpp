@@ -66,6 +66,15 @@ using namespace mrl;
   stdexec::sync_wait(renderer.render(bvh, img));                               \
   write_ppm_img(os, img);
 
+#define RENDER_VEC                                                             \
+  in_memory_image img{img_width, img_height};                                  \
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};                     \
+  std::ofstream os(path, std::ios::out);                                       \
+  img_renderer_t renderer(camera, camera_orientation, background, sch,         \
+                          cur_time);                                           \
+  stdexec::sync_wait(renderer.render(world, img));                             \
+  write_ppm_img(os, img);
+
 void random_spheres() {
   TH_POOL
   ANY;
