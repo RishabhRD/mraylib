@@ -1,5 +1,6 @@
 #pragma once
 
+#include "angle.hpp"
 #include "direction.hpp"
 #include "point.hpp"
 #include <concepts>
@@ -19,5 +20,26 @@ struct ray_t {
     return os;
   }
 };
+
+constexpr ray_t rotate(ray_t const &r, ray_t const &axis,
+                       angle_t const &angle) {
+  vec3 translated_origin = r.origin - axis.origin;
+
+  auto rdir = r.direction.val();
+  auto adir = axis.direction.val();
+
+  double angle_rad = radians(angle);
+
+  double cos_theta = std::cos(angle_rad);
+  double sin_theta = std::sin(angle_rad);
+  vec3 rotated_direction = rdir * cos_theta + cross(adir, rdir) * sin_theta +
+                           adir * dot(adir, rdir) * (1 - cos_theta);
+
+  vec3 rotated_origin = axis.origin + (cos_theta * translated_origin) +
+                        cross(adir, translated_origin) * sin_theta +
+                        adir * dot(adir, translated_origin) * (1 - cos_theta);
+
+  return {rotated_origin, rotated_direction};
+}
 
 } // namespace mrl

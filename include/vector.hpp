@@ -91,45 +91,4 @@ constexpr bool near_zero(vec3 const &v) {
   constexpr static auto s = 1e-8;
   return std::fabs(v.x) < s && std::fabs(v.y) < s && std::fabs(v.z) < s;
 }
-
-constexpr vec3 rotate_x(vec3 const &vector, angle_t angle) {
-  double angle_rad = radians(angle);
-  double cos_a = std::cos(angle_rad);
-  double sin_a = std::sin(angle_rad);
-
-  return {
-      vector.x,
-      cos_a * vector.y - sin_a * vector.z,
-      sin_a * vector.y + cos_a * vector.z,
-  };
-}
-
-constexpr vec3 rotate_y(vec3 const &vector, angle_t angle) {
-  double angle_rad = radians(angle);
-  double cos_a = cos(angle_rad);
-  double sin_a = sin(angle_rad);
-
-  return {
-      cos_a * vector.x + sin_a * vector.z,
-      vector.y,
-      sin_a * vector.x - cos_a * vector.z,
-  };
-}
-
-constexpr vec3 rotate_z(vec3 const &vector, angle_t angle) {
-  double angle_rad = radians(angle);
-  double cos_a = cos(angle_rad);
-  double sin_a = sin(angle_rad);
-
-  return {
-      cos_a * vector.x - sin_a * vector.y,
-      sin_a * vector.x + cos_a * vector.y,
-      vector.z,
-  };
-}
-
-constexpr vec3 rotate(vec3 const &vector, angle_t angle_x, angle_t angle_y,
-                      angle_t angle_z) {
-  return rotate_z(rotate_y(rotate_x(vector, angle_x), angle_y), angle_z);
-}
 } // namespace mrl
