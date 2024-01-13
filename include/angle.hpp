@@ -8,6 +8,8 @@ struct angle_t {
   double radians;
 };
 
+constexpr angle_t operator-(angle_t angle) { return angle_t{-angle.radians}; }
+
 constexpr auto radians(double rad) { return angle_t{rad}; }
 
 constexpr auto degrees(double degree) { return angle_t{(degree * pi) / 180}; }
