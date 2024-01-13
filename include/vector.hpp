@@ -127,4 +127,9 @@ constexpr vec3 rotate_z(vec3 const &vector, angle_t angle) {
       vector.z,
   };
 }
+
+constexpr vec3 rotate(vec3 const &vector, angle_t angle_x, angle_t angle_y,
+                      angle_t angle_z) {
+  return rotate_z(rotate_y(rotate_x(vector, angle_x), angle_y), angle_z);
+}
 } // namespace mrl
