@@ -316,4 +316,54 @@ void simple_light() {
   RENDER
 }
 
-int main() { simple_light(); }
+void cornell_box() {
+  TH_POOL
+  ANY;
+  auto background = color_t{0, 0, 0};
+
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+
+  auto img_width = 600;
+  aspect_ratio_t ratio{1, 1};
+  auto img_height = image_height(ratio, img_width);
+  camera_t camera{
+      .focus_distance = 10.0,
+      .vertical_fov = degrees(40),
+      .defocus_angle = degrees(0),
+  };
+  camera_orientation_t camera_orientation{
+      .look_from = point3{278, 278, -800},
+      .look_at = point3{278, 278, 0},
+      .up_dir = direction_t{0, 1, 0},
+  };
+
+  auto red = lambertian_t{color_t{.65, .05, .05}};
+  auto white = lambertian_t{color_t{.73, .73, .73}};
+  auto green = lambertian_t{color_t{.12, .45, .15}};
+  auto light = diffuse_light{color_t{1, 1, 1}, 15};
+
+  std::vector<any_object> world;
+  world.push_back(shape_object{
+      quad{point3{555, 0, 0}, vec3{0, 555, 0}, vec3{0, 0, 555}}, green});
+  world.push_back(shape_object{
+      quad{point3{0, 0, 0}, vec3{0, 555, 0}, vec3{0, 0, 555}}, red});
+  world.push_back(shape_object{
+      quad{point3{343, 554, 332}, vec3{-130, 0, 0}, vec3{0, 0, -105}}, light});
+  world.push_back(shape_object{
+      quad{point3{0, 0, 0}, vec3{555, 0, 0}, vec3{0, 0, 555}}, white});
+  world.push_back(shape_object{
+      quad{point3{555, 555, 555}, vec3{-555, 0, 0}, vec3{0, 0, -555}}, white});
+  world.push_back(shape_object{
+      quad{point3{0, 0, 555}, vec3{555, 0, 0}, vec3{0, 555, 0}}, white});
+
+  in_memory_image img{img_width, img_height};
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
+  std::ofstream os(path, std::ios::out);
+  img_renderer_t renderer(camera, camera_orientation, background, sch, cur_time,
+                          50, delta_sampler(200));
+  stdexec::sync_wait(renderer.render(world, img));
+  write_ppm_img(os, img);
+}
+
+int main() { cornell_box(); }

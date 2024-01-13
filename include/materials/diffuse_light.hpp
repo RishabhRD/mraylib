@@ -33,6 +33,7 @@ std::optional<emit_info_t> emit(diffuse_light<texture_t> const &light,
                                 hit_info_t const &hit_info,
                                 generator_view<Generator> rand) {
   return emit_info_t{texture_color(light.texture, hit_info.scale_2d,
-                                   hit_info.hit_point, rand)};
+                                   hit_info.hit_point, rand) *
+                     light.scale};
 }
 } // namespace mrl
