@@ -8,7 +8,7 @@
 #include "vector.hpp"
 
 namespace mrl {
-struct parallelogram {
+struct quad {
   point3 corner;
   vec3 corner_side_u;
   vec3 corner_side_v;
@@ -17,12 +17,12 @@ struct parallelogram {
 // Postcondition:
 //   - normal points to outisde quad
 //   - need not to be unit vector
-constexpr vec3 calc_normal(parallelogram const &quad) {
+constexpr vec3 calc_normal(quad const &quad) {
   return cross(quad.corner_side_u, quad.corner_side_v);
 }
 
-constexpr std::optional<hit_info_t>
-hit(parallelogram const &quad, ray_t const &r, interval_t const &interval) {
+constexpr std::optional<hit_info_t> hit(quad const &quad, ray_t const &r,
+                                        interval_t const &interval) {
   auto n = calc_normal(quad);
   auto w = n / dot(n, n);
   auto normal = direction_t{n};
@@ -51,7 +51,7 @@ hit(parallelogram const &quad, ray_t const &r, interval_t const &interval) {
   };
 }
 
-constexpr bound_t get_bounds(parallelogram const &quad) {
+constexpr bound_t get_bounds(quad const &quad) {
   return pad_bounds(bound_from_diagonal_points(
       quad.corner, quad.corner + quad.corner_side_u + quad.corner_side_v));
 }

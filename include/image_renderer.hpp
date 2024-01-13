@@ -75,6 +75,7 @@ constexpr color_t ray_color(ray_t const &ray, Object const &world, int depth,
   auto scattering_color =
       attenuation *
       ray_color(scattered_ray, world, depth - 1, background_color, rand);
+  // TODO: is there any condition where scattering and emitting both happens?
   return scattering_color + emitted;
 }
 

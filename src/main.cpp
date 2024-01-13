@@ -12,6 +12,7 @@
 #include "image_renderer.hpp"
 #include "materials/concept.hpp"
 #include "materials/dielectric.hpp"
+#include "materials/diffuse_light.hpp"
 #include "materials/lambertian.hpp"
 #include "materials/metal.hpp"
 #include "pixel_sampler/delta_sampler.hpp"
@@ -20,7 +21,7 @@
 #include "scene_objects/bvh.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/scene_object_range.hpp"
-#include "scene_objects/shapes/parallelogram.hpp"
+#include "scene_objects/shapes/quad.hpp"
 #include "scene_objects/shapes/shape_object.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "schedulers/concepts.hpp"
@@ -53,20 +54,22 @@ using namespace mrl;
 
 #define ANY using any_object = any_object_t<decltype(sch)>;
 
+#define BACKGROUND auto background = color_t{0.7, 0.8, 1.0};
+
 #define RENDER                                                                 \
   in_memory_image img{img_width, img_height};                                  \
   bvh_t<any_object> bvh{std::move(world)};                                     \
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};                     \
   std::ofstream os(path, std::ios::out);                                       \
-  img_renderer_t renderer(camera, camera_orientation,                          \
-                          color_t{0.70, 0.80, 1.00}, sch, cur_time);           \
+  img_renderer_t renderer(camera, camera_orientation, background, sch,         \
+                          cur_time);                                           \
   stdexec::sync_wait(renderer.render(bvh, img));                               \
   write_ppm_img(os, img);
 
 void random_spheres() {
   TH_POOL
   ANY;
-
+  BACKGROUND
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
   auto rand = random_generator(sch, cur_time);
@@ -143,6 +146,7 @@ void img() {
 void earth() {
   TH_POOL
   ANY;
+  BACKGROUND
 
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
@@ -182,6 +186,7 @@ void earth() {
 void perlin_spheres() {
   TH_POOL
   ANY;
+  BACKGROUND
 
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
@@ -220,6 +225,7 @@ void perlin_spheres() {
 void quads() {
   TH_POOL
   ANY;
+  BACKGROUND
 
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
@@ -231,21 +237,16 @@ void quads() {
   lambertian_t lower_teal{color_t(0.2, 0.8, 0.8)};
 
   std::vector world{
-      shape_object{
-          parallelogram{point3(-3, -2, 5), vec3(0, 0, -4), vec3(0, 4, 0)},
-          left_red},
-      shape_object{
-          parallelogram{point3(-2, -2, 0), vec3(4, 0, 0), vec3(0, 4, 0)},
-          back_green},
-      shape_object{
-          parallelogram{point3(3, -2, 1), vec3(0, 0, 4), vec3(0, 4, 0)},
-          right_blue},
-      shape_object{
-          parallelogram{point3(-2, 3, 1), vec3(4, 0, 0), vec3(0, 0, 4)},
-          upper_orange},
-      shape_object{
-          parallelogram{point3(-2, -3, 5), vec3(4, 0, 0), vec3(0, 0, -4)},
-          lower_teal},
+      shape_object{quad{point3(-3, -2, 5), vec3(0, 0, -4), vec3(0, 4, 0)},
+                   left_red},
+      shape_object{quad{point3(-2, -2, 0), vec3(4, 0, 0), vec3(0, 4, 0)},
+                   back_green},
+      shape_object{quad{point3(3, -2, 1), vec3(0, 0, 4), vec3(0, 4, 0)},
+                   right_blue},
+      shape_object{quad{point3(-2, 3, 1), vec3(4, 0, 0), vec3(0, 0, 4)},
+                   upper_orange},
+      shape_object{quad{point3(-2, -3, 5), vec3(4, 0, 0), vec3(0, 0, -4)},
+                   lower_teal},
   };
 
   auto img_width = 1000;
@@ -265,4 +266,40 @@ void quads() {
   RENDER
 }
 
-int main() { quads(); }
+void simple_light() {
+  TH_POOL
+  ANY;
+  auto background = color_t{0, 0, 0};
+
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+
+  auto img_width = 1000;
+  aspect_ratio_t ratio{16, 9};
+  auto img_height = image_height(ratio, img_width);
+  camera_t camera{
+      .focus_distance = 10.0,
+      .vertical_fov = degrees(20),
+      .defocus_angle = degrees(0),
+  };
+  camera_orientation_t camera_orientation{
+      .look_from = point3{26, 3, 6},
+      .look_at = point3{0, 2, 0},
+      .up_dir = direction_t{0, 1, 0},
+  };
+
+  perlin_texture texture{solid_color_texture{0.78, 0.4, 0.1},
+                         perlin_noise{cur_time}, 4};
+  lambertian_t material{texture};
+  diffuse_light light{color_t{4, 4, 4}};
+  shape_object big_sphere{sphere{1000, point3{0, -1000, 0}}, material};
+  shape_object small_sphere{sphere{2, point3{0, 2, 0}}, material};
+  shape_object light_source{
+      quad{point3{3, 1, -2}, vec3{2, 0, 0}, vec3{0, 2, 0}}, light};
+
+  std::vector<any_object> world{big_sphere, small_sphere, light_source};
+
+  RENDER
+}
+
+int main() { simple_light(); }
