@@ -3,8 +3,8 @@
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
 #include "point.hpp"
+#include "scale_2d.hpp"
 #include "textures/concepts.hpp"
-#include "textures/texture_coord.hpp"
 #include <utility>
 namespace mrl {
 template <typename EvenTexture, typename OddTexture> struct checker_texture {
@@ -29,7 +29,7 @@ template <DoubleGenerator Generator, Texture<Generator> EvenTexture,
           Texture<Generator> OddTexture>
 constexpr color_t
 texture_color(checker_texture<EvenTexture, OddTexture> const &texture,
-              texture_coord_t const &coord, point3 const &hit_point,
+              scale_2d_t const &coord, point3 const &hit_point,
               generator_view<Generator> rand) {
   auto x = static_cast<int>(std::floor(texture.inv_scale * hit_point.x));
   auto y = static_cast<int>(std::floor(texture.inv_scale * hit_point.y));

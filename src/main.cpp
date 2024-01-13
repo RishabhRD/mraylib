@@ -20,7 +20,8 @@
 #include "scene_objects/bvh.hpp"
 #include "scene_objects/concepts.hpp"
 #include "scene_objects/scene_object_range.hpp"
-#include "scene_objects/shapes/quad.hpp"
+#include "scene_objects/shapes/parallelogram.hpp"
+#include "scene_objects/shapes/shape_object.hpp"
 #include "scene_objects/shapes/sphere.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
@@ -41,14 +42,26 @@
 #include <iostream>
 #include <stdexec/execution.hpp>
 
+using namespace mrl;
+
 #define TH_POOL                                                                \
   auto const num_threads = std::thread::hardware_concurrency();                \
-  auto thread_pool = mrl::thread_pool{num_threads};                            \
-  auto sch = thread_pool.get_scheduler();
+  auto th_pool = thread_pool{num_threads};                                     \
+  auto sch = th_pool.get_scheduler();
 
-#define INLINE auto sch = mrl::inline_scheduler{};
+#define INLINE auto sch = inline_scheduler{};
 
-#define ANY using any_object = mrl::any_object_t<decltype(sch)>;
+#define ANY using any_object = any_object_t<decltype(sch)>;
+
+#define RENDER                                                                 \
+  in_memory_image img{img_width, img_height};                                  \
+  bvh_t<any_object> bvh{std::move(world)};                                     \
+  auto path = std::getenv("HOME") + std::string{"/x.ppm"};                     \
+  std::ofstream os(path, std::ios::out);                                       \
+  img_renderer_t renderer(camera, camera_orientation,                          \
+                          color_t{0.70, 0.80, 1.00}, sch, cur_time);           \
+  stdexec::sync_wait(renderer.render(bvh, img));                               \
+  write_ppm_img(os, img);
 
 void random_spheres() {
   TH_POOL
@@ -58,74 +71,65 @@ void random_spheres() {
       std::chrono::system_clock::now().time_since_epoch().count());
   auto rand = random_generator(sch, cur_time);
 
-  mrl::aspect_ratio_t ratio{16, 9};
+  aspect_ratio_t ratio{16, 9};
   auto img_width = 1000;
-  auto img_height = mrl::image_height(ratio, img_width);
-  mrl::in_memory_image img{img_width, img_height};
-  mrl::camera_t camera{
+  auto img_height = image_height(ratio, img_width);
+  camera_t camera{
       .focus_distance = 10.0,
-      .vertical_fov = mrl::degrees(20),
-      .defocus_angle = mrl::degrees(0.0),
+      .vertical_fov = degrees(20),
+      .defocus_angle = degrees(0.0),
   };
 
-  mrl::camera_orientation_t camera_orientation{
+  camera_orientation_t camera_orientation{
       .look_from = {13, 2, 3},
-      .look_at = mrl::point3(0, 0, 0),
-      .up_dir = mrl::direction_t{0, 1, 0},
+      .look_at = point3(0, 0, 0),
+      .up_dir = direction_t{0, 1, 0},
   };
 
   std::vector<any_object> world;
-  mrl::dielectric mat1(1.5);
-  mrl::lambertian_t mat2(mrl::color_t{0.4, 0.2, 0.1});
-  mrl::metal_t mat3(mrl::color_t{0.7, 0.6, 0.5});
+  dielectric mat1(1.5);
+  lambertian_t mat2(color_t{0.4, 0.2, 0.1});
+  metal_t mat3(color_t{0.7, 0.6, 0.5});
 
-  auto checker = mrl::lambertian_t{mrl::checker_texture{
-      0.32, mrl::solid_color_texture{mrl::from_rgb(38, 39, 41)},
-      mrl::solid_color_texture{mrl::color_t{.9, .9, .9}}}};
+  auto checker = lambertian_t{
+      checker_texture{0.32, solid_color_texture{from_rgb(38, 39, 41)},
+                      solid_color_texture{color_t{.9, .9, .9}}}};
 
-  world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{0, 1, 0}, mat1});
-  world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{-4, 1, 0}, mat2});
-  world.push_back(mrl::sphere_obj_t{1.0, mrl::point3{4, 1, 0}, mat3});
-  world.push_back(mrl::sphere_obj_t{1000.0, mrl::point3{0, -1000, 0}, checker});
+  world.push_back(shape_object{sphere{1.0, point3{0, 1, 0}}, mat1});
+  world.push_back(shape_object{sphere{1.0, point3{-4, 1, 0}}, mat2});
+  world.push_back(shape_object{sphere{1.0, point3{4, 1, 0}}, mat3});
+  world.push_back(shape_object{sphere{1000.0, point3{0, -1000, 0}}, checker});
 
   for (int a = -11; a < 11; ++a) {
     for (int b = -11; b < 11; ++b) {
       auto choose_mat = rand(0.0, 1.0);
       auto center =
-          mrl::point3{a + 0.9 * rand(0.0, 1.0), 0.2, b * 0.9 * rand(0.0, 1.0)};
+          point3{a + 0.9 * rand(0.0, 1.0), 0.2, b * 0.9 * rand(0.0, 1.0)};
       if (choose_mat < 0.8) {
-        auto color =
-            mrl::color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)} *
-            mrl::color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)};
-        world.push_back(
-            mrl::sphere_obj_t{0.2, center, mrl::lambertian_t{color}});
+        auto color = color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)} *
+                     color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)};
+        world.push_back(shape_object{sphere{0.2, center}, lambertian_t{color}});
       } else if (choose_mat < 0.95) {
-        auto color =
-            mrl::color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)};
+        auto color = color_t{rand(0.0, 1.0), rand(0.0, 1.0), rand(0.0, 1.0)};
         auto fuzz = rand(0.5, 1.0);
         world.push_back(
-            mrl::sphere_obj_t{0.2, center, mrl::fuzzy_metal_t{color, fuzz}});
+            shape_object{sphere{0.2, center}, fuzzy_metal_t{color, fuzz}});
 
       } else {
-        world.push_back(mrl::sphere_obj_t{0.2, center, mrl::dielectric{1.5}});
+        world.push_back(shape_object{sphere{0.2, center}, dielectric{1.5}});
       }
     }
   }
 
-  mrl::bvh_t<any_object> bvh{std::move(world)};
-  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
-  std::ofstream os(path, std::ios::out);
-  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
-  stdexec::sync_wait(renderer.render(bvh, img));
-  mrl::write_ppm_img(os, img);
+  RENDER
 }
 
 void img() {
-  auto space_img = mrl::stb_image{"data/space.jpg"};
+  auto space_img = stb_image{"data/space.jpg"};
   auto const img_width = width(space_img);
   auto const img_height = height(space_img);
   std::cerr << img_width << ' ' << img_height << std::endl;
-  mrl::in_memory_image img{img_width, img_height};
+  in_memory_image img{img_width, img_height};
   for (int y = 0; y < img_height; ++y) {
     for (int x = 0; x < img_width; ++x) {
       set_pixel_at(img, x, y, pixel_at(space_img, x, y));
@@ -133,51 +137,46 @@ void img() {
   }
   auto path = std::getenv("HOME") + std::string{"/x.ppm"};
   std::ofstream os(path, std::ios::out);
-  mrl::write_ppm_img_without_gamma(os, img);
+  write_ppm_img_without_gamma(os, img);
 }
 
 void earth() {
   TH_POOL
+  ANY;
 
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
-
   auto img_width = 1000;
-  mrl::aspect_ratio_t ratio{16, 9};
-  auto img_height = mrl::image_height(ratio, img_width);
-  mrl::camera_t camera{
+  aspect_ratio_t ratio{16, 9};
+  auto img_height = image_height(ratio, img_width);
+  camera_t camera{
       .focus_distance = 10.0,
-      .vertical_fov = mrl::degrees(20),
-      .defocus_angle = mrl::degrees(0),
+      .vertical_fov = degrees(20),
+      .defocus_angle = degrees(0),
   };
-  mrl::camera_orientation_t camera_orientation{
-      .look_from = mrl::point3{0, 0, 0},
-      .look_at = mrl::point3{0, 0, 15},
-      .up_dir = mrl::direction_t{0, 1, 0},
+  camera_orientation_t camera_orientation{
+      .look_from = point3{0, 0, 0},
+      .look_at = point3{0, 0, 15},
+      .up_dir = direction_t{0, 1, 0},
   };
 
-  auto earth_img = mrl::stb_image{"data/earthmap.jpg"};
-  auto earth_texture = mrl::image_texture{std::move(earth_img)};
-  auto earth_surface = mrl::lambertian_t{std::move(earth_texture)};
+  auto earth_img = stb_image{"data/earthmap.jpg"};
+  auto earth_texture = image_texture{std::move(earth_img)};
+  auto earth_surface = lambertian_t{std::move(earth_texture)};
   auto globe =
-      mrl::sphere_obj_t{2, mrl::point3{0, 0, 15}, std::move(earth_surface)};
+      shape_object{sphere{2, point3{0, 0, 15}}, std::move(earth_surface)};
 
-  auto space_img = mrl::stb_image{"data/space.jpg"};
-  auto space_texture = mrl::image_texture{std::move(space_img)};
-  auto space_surface = mrl::lambertian_t{std::move(space_texture)};
+  auto space_img = stb_image{"data/space.jpg"};
+  auto space_texture = image_texture{std::move(space_img)};
+  auto space_surface = lambertian_t{std::move(space_texture)};
   auto space =
-      mrl::sphere_obj_t{10, mrl::point3{0, 0, 25}, std::move(space_surface)};
+      shape_object{sphere{10, point3{0, 0, 25}}, std::move(space_surface)};
 
   std::vector<decltype(space)> world;
   world.push_back(std::move(globe));
   world.push_back(std::move(space));
 
-  mrl::in_memory_image img{img_width, img_height};
-  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
-  std::ofstream os(path, std::ios::out);
-  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
-  stdexec::sync_wait(renderer.render(world, img));
-  mrl::write_ppm_img_without_gamma(os, img);
+  RENDER
 }
 
 void perlin_spheres() {
@@ -188,39 +187,34 @@ void perlin_spheres() {
       std::chrono::system_clock::now().time_since_epoch().count());
 
   auto img_width = 1000;
-  mrl::aspect_ratio_t ratio{16, 9};
-  auto img_height = mrl::image_height(ratio, img_width);
-  mrl::camera_t camera{
+  aspect_ratio_t ratio{16, 9};
+  auto img_height = image_height(ratio, img_width);
+  camera_t camera{
       .focus_distance = 10.0,
-      .vertical_fov = mrl::degrees(20),
-      .defocus_angle = mrl::degrees(0),
+      .vertical_fov = degrees(20),
+      .defocus_angle = degrees(0),
   };
-  mrl::camera_orientation_t camera_orientation{
-      .look_from = mrl::point3{13, 2, 3},
-      .look_at = mrl::point3{0, 0, 0},
-      .up_dir = mrl::direction_t{0, 1, 0},
+  camera_orientation_t camera_orientation{
+      .look_from = point3{13, 2, 3},
+      .look_at = point3{0, 0, 0},
+      .up_dir = direction_t{0, 1, 0},
   };
 
-  auto earth_img = mrl::stb_image{"data/human.jpeg"};
-  auto earth_texture = mrl::image_texture{std::move(earth_img)};
-  mrl::perlin_texture texture{mrl::solid_color_texture{0.78, 0.4, 0.1},
-                              mrl::perlin_noise{cur_time}, 4};
-  mrl::perlin_texture small_texture{std::move(earth_texture),
-                                    mrl::perlin_noise{cur_time}, 4};
-  mrl::lambertian_t material{texture};
-  mrl::lambertian_t small_material{std::move(small_texture)};
-  mrl::sphere_obj_t big_sphere{1000, mrl::point3{0, -1000, 0}, material};
-  mrl::sphere_obj_t small_sphere{2, mrl::point3{0, 2, 0},
-                                 std::move(small_material)};
+  auto earth_img = stb_image{"data/human.jpeg"};
+  auto earth_texture = image_texture{std::move(earth_img)};
+  perlin_texture texture{solid_color_texture{0.78, 0.4, 0.1},
+                         perlin_noise{cur_time}, 4};
+  perlin_texture small_texture{std::move(earth_texture), perlin_noise{cur_time},
+                               4};
+  lambertian_t material{texture};
+  lambertian_t small_material{std::move(small_texture)};
+  shape_object big_sphere{sphere{1000, point3{0, -1000, 0}}, material};
+  shape_object small_sphere{sphere{2, point3{0, 2, 0}},
+                            std::move(small_material)};
 
   std::vector<any_object> world{big_sphere, std::move(small_sphere)};
 
-  mrl::in_memory_image img{img_width, img_height};
-  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
-  std::ofstream os(path, std::ios::out);
-  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
-  stdexec::sync_wait(renderer.render(world, img));
-  mrl::write_ppm_img(os, img);
+  RENDER
 }
 
 void quads() {
@@ -230,48 +224,45 @@ void quads() {
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
 
-  mrl::lambertian_t left_red{mrl::color_t(1.0, 0.2, 0.2)};
-  mrl::lambertian_t back_green{mrl::color_t(0.2, 1.0, 0.2)};
-  mrl::lambertian_t right_blue{mrl::color_t(0.2, 0.2, 1.0)};
-  mrl::lambertian_t upper_orange{mrl::color_t(1.0, 0.5, 0.0)};
-  mrl::lambertian_t lower_teal{mrl::color_t(0.2, 0.8, 0.8)};
+  lambertian_t left_red{color_t(1.0, 0.2, 0.2)};
+  lambertian_t back_green{color_t(0.2, 1.0, 0.2)};
+  lambertian_t right_blue{color_t(0.2, 0.2, 1.0)};
+  lambertian_t upper_orange{color_t(1.0, 0.5, 0.0)};
+  lambertian_t lower_teal{color_t(0.2, 0.8, 0.8)};
 
   std::vector world{
-      mrl::quad_obj_t{mrl::point3(-3, -2, 5), mrl::vec3(0, 0, -4),
-                      mrl::vec3(0, 4, 0), left_red},
-      mrl::quad_obj_t{mrl::point3(-2, -2, 0), mrl::vec3(4, 0, 0),
-                      mrl::vec3(0, 4, 0), back_green},
-      mrl::quad_obj_t{mrl::point3(3, -2, 1), mrl::vec3(0, 0, 4),
-                      mrl::vec3(0, 4, 0), right_blue},
-      mrl::quad_obj_t{mrl::point3(-2, 3, 1), mrl::vec3(4, 0, 0),
-                      mrl::vec3(0, 0, 4), upper_orange},
-      mrl::quad_obj_t{mrl::point3(-2, -3, 5), mrl::vec3(4, 0, 0),
-                      mrl::vec3(0, 0, -4), lower_teal},
+      shape_object{
+          parallelogram{point3(-3, -2, 5), vec3(0, 0, -4), vec3(0, 4, 0)},
+          left_red},
+      shape_object{
+          parallelogram{point3(-2, -2, 0), vec3(4, 0, 0), vec3(0, 4, 0)},
+          back_green},
+      shape_object{
+          parallelogram{point3(3, -2, 1), vec3(0, 0, 4), vec3(0, 4, 0)},
+          right_blue},
+      shape_object{
+          parallelogram{point3(-2, 3, 1), vec3(4, 0, 0), vec3(0, 0, 4)},
+          upper_orange},
+      shape_object{
+          parallelogram{point3(-2, -3, 5), vec3(4, 0, 0), vec3(0, 0, -4)},
+          lower_teal},
   };
 
   auto img_width = 1000;
-  mrl::aspect_ratio_t ratio{1, 1};
-  auto img_height = mrl::image_height(ratio, img_width);
-  mrl::camera_t camera{
+  aspect_ratio_t ratio{1, 1};
+  auto img_height = image_height(ratio, img_width);
+  camera_t camera{
       .focus_distance = 10,
-      .vertical_fov = mrl::degrees(80),
-      .defocus_angle = mrl::degrees(0),
+      .vertical_fov = degrees(80),
+      .defocus_angle = degrees(0),
   };
-  mrl::camera_orientation_t camera_orientation{
-      .look_from = mrl::point3{0, 0, 9},
-      .look_at = mrl::point3{0, 0, 0},
-      .up_dir = mrl::direction_t{0, 1, 0},
+  camera_orientation_t camera_orientation{
+      .look_from = point3{0, 0, 9},
+      .look_at = point3{0, 0, 0},
+      .up_dir = direction_t{0, 1, 0},
   };
 
-  // TODO: this should compile without any_object
-  mrl::bvh_t<any_object> bvh{std::move(world)};
-
-  mrl::in_memory_image img{img_width, img_height};
-  auto path = std::getenv("HOME") + std::string{"/x.ppm"};
-  std::ofstream os(path, std::ios::out);
-  mrl::img_renderer_t renderer(camera, camera_orientation, sch, cur_time);
-  stdexec::sync_wait(renderer.render(bvh, img));
-  mrl::write_ppm_img(os, img);
+  RENDER
 }
 
 int main() { quads(); }

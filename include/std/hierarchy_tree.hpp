@@ -30,8 +30,7 @@ public:
   hierarchy_tree(Range &&rng, GetBounds get_bounds_, UnionBounds union_bounds_)
       : get_bounds(std::move(get_bounds_)),
         union_bounds(std::move(union_bounds_)) {
-
-    if constexpr (std::is_rvalue_reference_v<Range>) {
+    if constexpr (std::is_rvalue_reference_v<Range &&>) {
       internal_tree.root =
           build_tree_move(std::ranges::begin(rng), std::ranges::end(rng));
     } else {
@@ -102,7 +101,8 @@ private:
     auto bounds = union_bounds(std::move(bound_left), std::move(bound_right));
     auto left = build_tree_move(begin, mid);
     auto right = build_tree_move(mid, end);
-    return make_btree_node(data_type{std::move(bounds)}, left, right);
+    return make_btree_node(data_type{std::move(bounds)}, std::move(left),
+                           std::move(right));
   }
 
   template <typename F, typename Predicate>

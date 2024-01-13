@@ -2,43 +2,26 @@
 
 #include "bound.hpp"
 #include "direction.hpp"
-#include "generator/concepts.hpp"
-#include "generator/generator_view.hpp"
-#include "hit_record.hpp"
+#include "hit_info.hpp"
 #include "interval.hpp"
-#include "materials/concept.hpp"
 #include "point.hpp"
 #include "ray.hpp"
-#include "textures/texture_coord.hpp"
+#include "scale_2d.hpp"
 #include "vector.hpp"
 #include <cmath>
 #include <optional>
 
 namespace mrl {
-// TODO: I don't know... this is required or not
-// struct sphere_t {
-//   double radius;
-// };
-
-template <typename material_t> struct sphere_obj_t {
+struct sphere {
   double radius;
   point3 center;
-  material_t material;
-
-  constexpr sphere_obj_t(double radius_, point3 center_, material_t material_)
-      : radius(radius_), center(center_), material(std::move(material_)) {}
 };
-
-template <typename material_t>
-sphere_obj_t(double, point3, material_t) -> sphere_obj_t<material_t>;
 
 namespace __sphere_details {
 
 // Postcondition:
 //   - Returns the least possible t if any
-template <typename material_t>
-constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
-                                      ray_t const &r,
+constexpr std::optional<double> hit_t(sphere const &obj, ray_t const &r,
                                       interval_t const &t_range) {
   auto oc = r.origin - obj.center;
   auto a = r.direction.val().length_square();
@@ -57,13 +40,11 @@ constexpr std::optional<double> hit_t(sphere_obj_t<material_t> const &obj,
   return std::nullopt;
 }
 
-template <typename material_t>
-constexpr direction_t calc_normal(sphere_obj_t<material_t> const &obj,
-                                  point3 const &p) {
+constexpr direction_t calc_normal(sphere const &obj, point3 const &p) {
   return p - obj.center;
 }
 
-constexpr texture_coord_t calc_texture_coord(vec3 const &normal) {
+constexpr scale_2d_t calc_texture_coord(vec3 const &normal) {
   constexpr static double pi = 3.1415926535897932385;
   auto theta = acos(-normal.y);
   auto phi = atan2(-normal.z, normal.x) + pi;
@@ -77,27 +58,24 @@ constexpr texture_coord_t calc_texture_coord(vec3 const &normal) {
 //   - t should be the minimum possible value for which ray intersects object
 //   - normal is perpendicular to hit point
 //   - normal should always point outside of object
-template <DoubleGenerator Generator, Material<Generator> material_t>
-constexpr std::optional<hit_record_t>
-hit(sphere_obj_t<material_t> const &obj, ray_t const &r,
-    interval_t const &interval, generator_view<Generator> rand) {
+constexpr std::optional<hit_info_t> hit(sphere const &obj, ray_t const &r,
+                                        interval_t const &interval) {
   auto t_opt = __sphere_details::hit_t(obj, r, interval);
-  return t_opt.transform([&obj, &r, rand](double t) {
-    auto point = r.at(t);
-    auto normal = __sphere_details::calc_normal(obj, point);
-    return hit_record_t{
-        .t = t,
-        .hit_point = point,
-        .normal = normal,
-        .scattering = scatter(
-            obj.material, r, point,
-            __sphere_details::calc_texture_coord(normal.val()), normal, rand),
-    };
-  });
+  if (!t_opt)
+    return std::nullopt;
+  auto t = *t_opt;
+  auto point = r.at(t);
+  auto normal = __sphere_details::calc_normal(obj, point);
+  auto scaling = __sphere_details::calc_texture_coord(normal.val());
+  return hit_info_t{
+      .t = t,
+      .hit_point = point,
+      .outward_normal = normal,
+      .scale_2d = scaling,
+  };
 }
 
-template <typename Material>
-bound_t get_bounds(sphere_obj_t<Material> const &sphere) {
+constexpr bound_t get_bounds(sphere const &sphere) {
   return {
       .x_range = interval_t{sphere.center.x - sphere.radius,
                             sphere.center.x + sphere.radius},

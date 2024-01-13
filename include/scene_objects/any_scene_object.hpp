@@ -1,7 +1,7 @@
 #pragma once
 
 #include "generator/concepts.hpp"
-#include "hit_record.hpp"
+#include "hit_context.hpp"
 #include "interval.hpp"
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
@@ -17,17 +17,17 @@ public:
   template <typename T>
   any_scene_object(T x) : self_(std::make_shared<model_t<T>>(std::move(x))) {}
 
-  friend std::optional<hit_record_t> hit(any_scene_object const &obj,
-                                         ray_t const &ray,
-                                         interval_t const &t_rng,
-                                         generator_view<Generator> rand) {
+  friend std::optional<hit_context_t> hit(any_scene_object const &obj,
+                                          ray_t const &ray,
+                                          interval_t const &t_rng,
+                                          generator_view<Generator> rand) {
     return obj.self_->hit_mem(ray, t_rng, rand);
   }
 
 private:
   struct concept_t {
     virtual ~concept_t() = default;
-    virtual std::optional<hit_record_t>
+    virtual std::optional<hit_context_t>
     hit_mem(ray_t const &, interval_t const &,
             generator_view<Generator> rand) const = 0;
     virtual bound_t get_bounds_mem() const = 0;
@@ -37,7 +37,7 @@ private:
     T hittable;
     model_t(T h_arg) : hittable(std::move(h_arg)){};
 
-    std::optional<hit_record_t>
+    std::optional<hit_context_t>
     hit_mem(ray_t const &ray, interval_t const &t_rng,
             generator_view<Generator> rand) const override {
       return hit(hittable, ray, t_rng, rand);
@@ -51,9 +51,9 @@ public:
 };
 
 template <DoubleGenerator Generator>
-std::optional<hit_record_t> hit(any_scene_object<Generator> const &,
-                                ray_t const &, interval_t const &,
-                                generator_view<Generator>);
+std::optional<hit_context_t> hit(any_scene_object<Generator> const &,
+                                 ray_t const &, interval_t const &,
+                                 generator_view<Generator>);
 
 template <DoubleGenerator Generator>
 bound_t get_bounds(any_scene_object<Generator> const &obj) {
