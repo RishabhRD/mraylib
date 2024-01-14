@@ -20,6 +20,7 @@
 #include "scene_objects/any_scene_object.hpp"
 #include "scene_objects/bvh.hpp"
 #include "scene_objects/concepts.hpp"
+#include "scene_objects/rotate_object.hpp"
 #include "scene_objects/scene_object_range.hpp"
 #include "scene_objects/shapes/quad.hpp"
 #include "scene_objects/shapes/shape_object.hpp"
@@ -46,6 +47,8 @@
 #include <stdexec/execution.hpp>
 
 using namespace mrl;
+
+namespace rng = std::ranges;
 
 #define TH_POOL                                                                \
   auto const num_threads = std::thread::hardware_concurrency();                \
@@ -348,6 +351,12 @@ auto move_by(vec3 offset) {
   };
 }
 
+auto rotate_by(ray_t axis, angle_t angle) {
+  return [axis, angle](auto obj) {
+    return rotate_object{std::move(obj), axis, angle};
+  };
+}
+
 void cornell_box() {
   TH_POOL
   ANY;
@@ -391,9 +400,12 @@ void cornell_box() {
       quad{point3{0, 0, 555}, vec3{555, 0, 0}, vec3{0, 555, 0}}, white});
   auto box1 = box(point3(265, 0, 295), point3(430, 330, 460), white);
   auto box2 = box(point3(130, 0, 65), point3(295, 165, 230), white);
-  world.insert(std::end(world), std::begin(box1), std::end(box1));
-  std::transform(std::begin(box2), std::end(box2), std::back_inserter(world),
-                 move_by(vec3{0, 100, 0}));
+  auto axis_of_rotation = ray_t{
+      (point3(130, 0, 65) + point3(295, 0, 230)) / 2.0, direction_t{0, 1, 0}};
+  auto angle_of_rotation = degrees(-22);
+  rng::transform(box1, std::back_inserter(world),
+                 rotate_by(axis_of_rotation, angle_of_rotation));
+  rng::transform(box2, std::back_inserter(world), move_by(vec3{0, 100, 0}));
 
   bvh_t<any_object> bvh{std::move(world)};
   in_memory_image img{img_width, img_height};
