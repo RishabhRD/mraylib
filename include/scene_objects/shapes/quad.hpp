@@ -28,6 +28,17 @@ constexpr direction_t normal_at(quad const &q, point3 const &) {
   return calc_normal(q);
 }
 
+// Precondition:
+//   - p should be at surface of q
+constexpr scale_2d_t scaling_2d_at(quad const &q, point3 const &p) {
+  auto const n = calc_normal(q);
+  auto const w = n / dot(n, n);
+  auto const planar_hitpt_vector = p - q.corner;
+  auto const alpha = dot(w, cross(planar_hitpt_vector, q.corner_side_v));
+  auto const beta = dot(w, cross(q.corner_side_u, planar_hitpt_vector));
+  return {alpha, beta};
+}
+
 constexpr std::optional<double> ray_hit_distance(quad const &q, ray_t const &r,
                                                  interval_t const &interval) {
   auto n = calc_normal(q);
@@ -41,18 +52,13 @@ constexpr std::optional<double> ray_hit_distance(quad const &q, ray_t const &r,
   if (!interval.contains(t)) {
     return std::nullopt;
   }
+  auto scaling = scaling_2d_at(q, r.at(t));
+  auto alpha = scaling.x_scale();
+  auto beta = scaling.y_scale();
+  if ((alpha < 0) || (1 < alpha) || (beta < 0) || (1 < beta)) {
+    return std::nullopt;
+  }
   return t;
-}
-
-// Precondition:
-//   - p should be at surface of q
-constexpr scale_2d_t scaling_2d_at(quad const &q, point3 const &p) {
-  auto const n = calc_normal(q);
-  auto const w = n / dot(n, n);
-  auto const planar_hitpt_vector = p - q.corner;
-  auto const alpha = dot(w, cross(planar_hitpt_vector, q.corner_side_v));
-  auto const beta = dot(w, cross(q.corner_side_u, planar_hitpt_vector));
-  return {alpha, beta};
 }
 
 constexpr bound_t get_bounds(quad const &quad) {
