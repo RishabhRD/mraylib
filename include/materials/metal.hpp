@@ -10,7 +10,6 @@
 #include "materials/scatter_info.hpp"
 #include "normal.hpp"
 #include "ray.hpp"
-#include "scale_2d.hpp"
 #include "vector.hpp"
 #include <optional>
 
@@ -21,11 +20,11 @@ struct metal_t {
 
 template <DoubleGenerator Generator>
 constexpr std::optional<scatter_info_t>
-scatter(metal_t const &material, ray_t const &in_ray, point3 const &hit_point,
-        scale_2d_t, direction_t normal, generator_view<Generator>) {
-  normal = normal_dir(normal, in_ray.direction);
+scatter(metal_t const &material, ray_t const &in_ray,
+        hit_info_t const &hit_info, generator_view<Generator>) {
+  auto normal = normal_dir(hit_info.outward_normal, in_ray.direction);
   auto ray_dir = reflection_dir(in_ray.direction, normal);
-  ray_t scattered_ray{.origin = hit_point, .direction = ray_dir};
+  ray_t scattered_ray{.origin = hit_info.hit_point, .direction = ray_dir};
   return scatter_info_t{
       .scattered_ray = scattered_ray,
       .attenuated_color = material.albedo,
