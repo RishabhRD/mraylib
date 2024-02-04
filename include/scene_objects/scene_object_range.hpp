@@ -21,8 +21,8 @@ hit(SceneObjectRange const &obj, ray_t const &ray, interval_t const &i) {
       obj                                                                   //
       | rv::transform([&ray, &i](auto const &e) { return hit(e, ray, i); }) //
       | rv::filter([](auto const &res) { return res.has_value(); });
-  auto get_t = [](auto const &hit_info) { return hit_info->t; };
-  auto min_iter = std::ranges::min_element(hit_results, std::less<>(), get_t);
+  auto dist = [](auto const &hit_info) { return hit_info->hit_distance; };
+  auto min_iter = std::ranges::min_element(hit_results, std::less<>(), dist);
   if (min_iter == std::ranges::end(hit_results))
     return std::nullopt;
   else
