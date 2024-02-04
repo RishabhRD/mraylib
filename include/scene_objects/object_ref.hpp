@@ -1,13 +1,12 @@
 #pragma once
 
-#include "generator/concepts.hpp"
-#include "hit_context.hpp"
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
-#include <optional>
 
 namespace mrl {
 template <typename Object> struct object_ref_t {
+  using object_type = Object;
+  using hit_object_type = hit_object_t<Object>;
   Object *object;
 
   constexpr object_ref_t(Object &obj_ref) : object(&obj_ref) {}
@@ -16,11 +15,9 @@ template <typename Object> struct object_ref_t {
 template <typename Object>
 object_ref_t(Object &obj_ref) -> object_ref_t<Object>;
 
-template <DoubleGenerator Generator, SceneObject<Generator> Object>
-constexpr std::optional<hit_context_t> hit(object_ref_t<Object> const &obj,
-                                           ray_t const &ray,
-                                           generator_view<Generator> rand) {
-  return hit(*(obj.object), ray, rand);
+template <SceneObject Object>
+constexpr auto hit(object_ref_t<Object> const &obj, ray_t const &r) {
+  return hit(*(obj.object), r);
 }
 
 template <BoundedObject Object>

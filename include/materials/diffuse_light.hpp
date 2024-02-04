@@ -3,8 +3,8 @@
 #include "color.hpp"
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
-#include "hit_info.hpp"
 #include "materials/emit_info.hpp"
+#include "materials/material_context.hpp"
 #include "textures/concepts.hpp"
 #include "textures/solid_color.hpp"
 #include <optional>
@@ -27,9 +27,9 @@ template <typename Texture> diffuse_light(Texture) -> diffuse_light<Texture>;
 
 template <DoubleGenerator Generator, Texture<Generator> texture_t>
 std::optional<emit_info_t> emit(diffuse_light<texture_t> const &light,
-                                hit_info_t const &hit_info,
+                                emission_context const &ctx,
                                 generator_view<Generator> rand) {
-  return emit_info_t{texture_color(light.texture, hit_info.scale_2d,
-                                   hit_info.hit_point, rand)};
+  return emit_info_t{
+      texture_color(light.texture, ctx.scaling_2d, ctx.hit_point, rand)};
 }
 } // namespace mrl

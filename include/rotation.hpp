@@ -8,6 +8,17 @@
 #include <functional>
 
 namespace mrl {
+constexpr vec3 rotate(vec3 const &r, ray_t const &axis, angle_t const &angle) {
+  auto const adir = axis.direction.val();
+
+  double const angle_rad = radians(angle);
+
+  double const cos_theta = std::cos(angle_rad);
+  double const sin_theta = std::sin(angle_rad);
+  return r * cos_theta + cross(adir, r) * sin_theta +
+         adir * dot(adir, r) * (1 - cos_theta);
+}
+
 constexpr ray_t rotate(ray_t const &r, ray_t const &axis,
                        angle_t const &angle) {
   vec3 translated_origin = r.origin - axis.origin;
@@ -27,32 +38,6 @@ constexpr ray_t rotate(ray_t const &r, ray_t const &axis,
                         adir * dot(adir, translated_origin) * (1 - cos_theta);
 
   return {rotated_origin, rotated_direction};
-}
-
-constexpr point3 rotate(point3 const &p, ray_t const &axis,
-                        angle_t const &angle) {
-  double angle_rad = radians(angle);
-  double cos_theta = std::cos(angle_rad);
-  double sin_theta = std::sin(angle_rad);
-
-  double ux = axis.direction.val().x;
-  double uy = axis.direction.val().y;
-  double uz = axis.direction.val().z;
-  double one_minus_cos_theta = 1 - cos_theta;
-
-  double rotated_x = p.x * (cos_theta + ux * ux * one_minus_cos_theta) +
-                     p.y * (ux * uy * one_minus_cos_theta - uz * sin_theta) +
-                     p.z * (ux * uz * one_minus_cos_theta + uy * sin_theta);
-
-  double rotated_y = p.x * (uy * ux * one_minus_cos_theta + uz * sin_theta) +
-                     p.y * (cos_theta + uy * uy * one_minus_cos_theta) +
-                     p.z * (uy * uz * one_minus_cos_theta - ux * sin_theta);
-
-  double rotated_z = p.x * (uz * ux * one_minus_cos_theta - uy * sin_theta) +
-                     p.y * (uz * uy * one_minus_cos_theta + ux * sin_theta) +
-                     p.z * (cos_theta + uz * uz * one_minus_cos_theta);
-
-  return {rotated_x, rotated_y, rotated_z};
 }
 
 constexpr bound_t rotate(bound_t const &bound, ray_t const &axis,

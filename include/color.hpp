@@ -1,7 +1,5 @@
 #pragma once
 
-#include "direction.hpp"
-#include "vector.hpp"
 #include <cmath>
 #include <ostream>
 #include <tuple>

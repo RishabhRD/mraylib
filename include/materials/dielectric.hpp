@@ -3,8 +3,8 @@
 #include "direction.hpp"
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
-#include "hit_info.hpp"
 #include "light.hpp"
+#include "materials/material_context.hpp"
 #include "materials/scatter_info.hpp"
 #include "normal.hpp"
 #include "ray.hpp"
@@ -52,24 +52,25 @@ struct dielectric {
 // Precondition:
 //   - normal points to outside of object from hit_point
 template <DoubleGenerator Generator>
-constexpr auto scatter(dielectric const &material, ray_t const &in_ray,
-                       hit_info_t const &hit_info,
+constexpr auto scatter(dielectric const &material,
+                       scattering_context const &ctx,
                        generator_view<Generator> rand) {
+  auto const &ray = ctx.ray;
   auto refractive_index = material.refractive_index;
   color_t attenuation{1.0, 1.0, 1.0};
-  auto normal = hit_info.outward_normal;
-  auto ray_from_outside = is_normal_away_from_ray(normal, in_ray.direction);
+  auto normal = ctx.normal;
+  auto ray_from_outside = is_normal_away_from_ray(normal, ray.direction);
   double refraction_ratio =
       ray_from_outside ? (1.0 / refractive_index) : refractive_index;
   normal = ray_from_outside ? normal : opposite(normal);
 
-  double cos_theta = std::fmin(dot(-in_ray.direction.val(), normal.val()), 1.0);
+  double cos_theta = std::fmin(dot(-ray.direction.val(), normal.val()), 1.0);
   double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
   auto out_ray_dir =
       __details::out_ray_dir(sin_theta, cos_theta, refraction_ratio,
-                             rand(0.0, 1.0), in_ray.direction, normal);
+                             rand(0.0, 1.0), ray.direction, normal);
   return std::optional{scatter_info_t{
-      ray_t{hit_info.hit_point, out_ray_dir},
+      ray_t{ctx.hit_point, out_ray_dir},
       attenuation,
   }};
 }

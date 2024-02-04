@@ -5,7 +5,7 @@
 #include "generator/concepts.hpp"
 #include "generator/direction_generator.hpp"
 #include "generator/generator_view.hpp"
-#include "hit_info.hpp"
+#include "materials/material_context.hpp"
 #include "materials/scatter_info.hpp"
 #include "normal.hpp"
 #include "point.hpp"
@@ -49,12 +49,11 @@ lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
 
 template <DoubleGenerator Generator, Texture<Generator> texture_t>
 constexpr auto scatter(lambertian_t<texture_t> const &material,
-                       ray_t const &in_ray, hit_info_t const &hit_info,
+                       scattering_context const &ctx,
                        generator_view<Generator> rand) {
-  auto color = texture_color(material.albedo, hit_info.scale_2d,
-                             hit_info.hit_point, rand);
-  return lambertian_scatter(color, in_ray, hit_info.hit_point,
-                            hit_info.outward_normal,
+  auto color =
+      texture_color(material.albedo, ctx.scaling_2d, ctx.hit_point, rand);
+  return lambertian_scatter(color, ctx.ray, ctx.hit_point, ctx.normal,
                             direction_generator{}(rand));
 }
 
