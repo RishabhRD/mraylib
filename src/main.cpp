@@ -417,4 +417,4 @@ void cornell_box() {
   write_ppm_img(os, img);
 }
 
-int main() { simple_light(); }
+int main() { cornell_box(); }
