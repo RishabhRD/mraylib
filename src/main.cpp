@@ -308,7 +308,7 @@ void simple_light() {
   perlin_texture texture{solid_color_texture{0.78, 0.4, 0.1},
                          perlin_noise{cur_time}, 4};
   lambertian_t material{texture};
-  diffuse_light light{color_t{1, 1, 1}};
+  diffuse_light light{color_t{8, 8, 8}};
   shape_object big_sphere{sphere{1000, point3{0, -1000, 0}}, material};
   shape_object small_sphere{sphere{2, point3{0, 2, 0}},
                             std::move(earth_surface)};
