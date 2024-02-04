@@ -16,14 +16,13 @@
 #include "pixel_sampler/delta_sampler.hpp"
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
+#include "scene_objects/translate_object.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/type_traits.hpp"
-#include "std/ranges.hpp"
 #include "vector.hpp"
 #include <cmath>
 #include <functional>
 #include <limits>
-#include <ranges>
 #include <stdexec/execution.hpp>
 #include <type_traits>
 
@@ -50,24 +49,27 @@ constexpr vec3 viewport_topleft(vec3 right, vec3 down, point3 camera_pos,
   return camera_pos + camera_dir.val() * f - right / 2 - down / 2;
 }
 
-template <DoubleGenerator Generator, SceneObject<Generator> Object>
+template <DoubleGenerator Generator, SceneObject Object>
 constexpr color_t ray_color(ray_t const &ray, Object const &world, int depth,
                             color_t const &background_color,
                             generator_view<Generator> rand) {
   if (depth <= 0)
     return {0, 0, 0};
   constexpr static double closeness_limit = 0.001;
-  auto hit_record =
-      hit(world, ray,
-          interval_t{closeness_limit, std::numeric_limits<double>::infinity()},
-          rand);
-  if (!hit_record) {
+  constexpr static auto hit_interval =
+      interval_t{closeness_limit, std::numeric_limits<double>::infinity()};
+  auto const hit_rec_opt = hit(world, ray, hit_interval);
+  if (!hit_rec_opt) {
     return background_color;
   }
+  auto const hit_distance = hit_rec_opt->hit_distance;
+  auto const hit_point = ray.at(hit_distance);
+  HitObject<Generator> auto const hit_obj = std::move(hit_rec_opt->hit_object);
+  auto const scattering = scattering_for(hit_obj, ray, hit_distance, rand);
+  auto const emitted = emission_at(hit_obj, hit_point, rand)
+                           .value_or(emit_info_t{color_t{0, 0, 0}})
+                           .color;
 
-  auto scattering = hit_record->scatter_info;
-  auto emitted =
-      hit_record->emit_info.value_or(emit_info_t{color_t{0, 0, 0}}).color;
   if (!scattering)
     return emitted;
   auto scattered_ray = scattering->scattered_ray;
@@ -75,14 +77,13 @@ constexpr color_t ray_color(ray_t const &ray, Object const &world, int depth,
   auto scattering_color =
       attenuation *
       ray_color(scattered_ray, world, depth - 1, background_color, rand);
-  // TODO: is there any condition where scattering and emitting both happens?
   return scattering_color + emitted;
 }
 
 // Precondition:
 //   - std::ranges::distance(rng) >= 1
 //   - RayOriginGenerator generates center in defocus disk
-template <DoubleGenerator Generator, SceneObject<Generator> Object,
+template <DoubleGenerator Generator, SceneObject Object,
           std::ranges::input_range VectorRange,
           std::invocable RayOriginGenerator>
   requires RangeValueType<VectorRange, vec3> &&
@@ -143,7 +144,7 @@ constexpr auto build_rendering_context(Image &img, camera_t const &camera,
   };
 }
 
-template <DoubleGenerator random_t, SceneObject<random_t> Object,
+template <DoubleGenerator random_t, SceneObject Object,
           PixelSampler<random_t> Sampler>
 constexpr auto generate_pixel(int row, int col, Object const &world,
                               rendering_context_t ctx, Sampler sampler,
@@ -168,7 +169,7 @@ constexpr auto generate_pixel(int row, int col, Object const &world,
 }
 
 template <Camera camera_t, OutputRandomAccessImage Image, Scheduler scheduler_t,
-          DoubleGenerator random_t, SceneObject<random_t> Object,
+          DoubleGenerator random_t, SceneObject Object,
           PixelSampler<random_t> Sampler>
 constexpr auto
 render_image(Object const &world, Image &img, camera_t const &camera,
@@ -223,8 +224,7 @@ struct img_renderer_t {
                        random_generator(scheduler_, random_seed),
                        rendering_depth_, std::move(sampler_)) {}
 
-  template <SceneObject<random_generator_t> Object,
-            OutputRandomAccessImage Image>
+  template <SceneObject Object, OutputRandomAccessImage Image>
   constexpr auto render(Object const &world, Image &img) {
     return render_image(world, img, camera, camera_orientation, sampler,
                         rendering_depth, background_color, scheduler,

@@ -1,14 +1,21 @@
 #pragma once
 
-#include "hit_info.hpp"
 #include "interval.hpp"
+#include "point.hpp"
 #include "ray.hpp"
-#include "scene_objects/concepts.hpp"
+#include "scale_2d.hpp"
+#include <optional>
+
 namespace mrl {
 template <typename shape_t>
-concept Shape =
-    BoundedObject<shape_t> && requires(shape_t const &shape, ray_t const &ray,
-                                       interval_t const &interval) {
-      { hit(shape, ray, interval) } -> std::same_as<std::optional<hit_info_t>>;
-    };
+// Precondition:
+//   - p should lie on surface of shape
+concept Shape = requires(shape_t const &shape, ray_t const &r, point3 const &p,
+                         interval_t const &i) {
+  // Postconditon:
+  //   - normal points to outside the object
+  { normal_at(shape, p) } -> std::same_as<direction_t>;
+  { scaling_2d_at(shape, p) } -> std::same_as<scale_2d_t>;
+  { ray_hit_distance(shape, r, i) } -> std::same_as<std::optional<double>>;
+};
 }

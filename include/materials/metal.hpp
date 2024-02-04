@@ -5,8 +5,8 @@
 #include "generator/concepts.hpp"
 #include "generator/direction_generator.hpp"
 #include "generator/generator_view.hpp"
-#include "hit_info.hpp"
 #include "light.hpp"
+#include "materials/material_context.hpp"
 #include "materials/scatter_info.hpp"
 #include "normal.hpp"
 #include "ray.hpp"
@@ -19,12 +19,13 @@ struct metal_t {
 };
 
 template <DoubleGenerator Generator>
-constexpr std::optional<scatter_info_t>
-scatter(metal_t const &material, ray_t const &in_ray,
-        hit_info_t const &hit_info, generator_view<Generator>) {
-  auto normal = normal_dir(hit_info.outward_normal, in_ray.direction);
-  auto ray_dir = reflection_dir(in_ray.direction, normal);
-  ray_t scattered_ray{.origin = hit_info.hit_point, .direction = ray_dir};
+constexpr std::optional<scatter_info_t> scatter(metal_t const &material,
+                                                scattering_context const &ctx,
+                                                generator_view<Generator>) {
+  auto const &ray = ctx.ray;
+  auto normal = normal_dir(ctx.normal, ray.direction);
+  auto ray_dir = reflection_dir(ray.direction, normal);
+  ray_t scattered_ray{.origin = ctx.hit_point, .direction = ray_dir};
   return scatter_info_t{
       .scattered_ray = scattered_ray,
       .attenuated_color = material.albedo,
@@ -38,11 +39,12 @@ struct fuzzy_metal_t {
 
 template <DoubleGenerator Generator>
 constexpr std::optional<scatter_info_t>
-scatter(fuzzy_metal_t const &material, ray_t const &in_ray,
-        hit_info_t const &hit_info, generator_view<Generator> rand) {
-  auto normal = normal_dir(hit_info.outward_normal, in_ray.direction);
-  auto ray_dir = reflection_dir(in_ray.direction, normal);
-  ray_t scattered_ray{.origin = hit_info.hit_point,
+scatter(fuzzy_metal_t const &material, scattering_context const &ctx,
+        generator_view<Generator> rand) {
+  auto const &ray = ctx.ray;
+  auto normal = normal_dir(ctx.normal, ray.direction);
+  auto ray_dir = reflection_dir(ray.direction, normal);
+  ray_t scattered_ray{.origin = ctx.hit_point,
                       .direction = ray_dir.val() +
                                    material.fuzz_factor *
                                        direction_generator{}(rand).val()};
