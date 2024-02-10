@@ -98,6 +98,14 @@ int main() {
 ### Examples
 Some examples with different features can be found in `examples/` directory.
 
+### Building Examples
+Add stdexec to include path. (stdexec is not there in conan center, contribution
+for handling it through cmake would be appreciated). Then execute:
+```bash
+./update_package
+./build
+```
+
 ## Credits
 
 - [Ray Tracing In One Weekend](https://raytracing.github.io/)
