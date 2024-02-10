@@ -1,39 +1,3 @@
-# mraylib
-
-mraylib is a C++23 pure algorithmic ray tracing library.
-
-mraylib focuses on following:
-- Design by contract \[WIP\]
-- Independent of Execution Context (use Senders/Receivers)
-- Pure Algorithmic
-
-<p align="center">
-  <img src='https://github.com/RishabhRD/mraylib/assets/26287448/f040787d-c36a-4731-8fb3-39857ec25a53' width='500'>
-</p>
-
-### Design by contract \[WIP\]
-I started mraylib as an exercise of trying to write something real with what I
-felt is good code. Any feedbacks or contribution in this direction is highly
-appreciated.
-
-### Independent of Execution Context
-I have seen many ray tracers that written for thread pool or single thread or
-cuda. However, I wanted this ray tracer to be independent of execution context.
-This needed a good abstraction over exeuctors. [P2300](https://wg21.link/P2300)
-is a good proposal for the same. mraylib depends on [stdexec](https://github.com/NVIDIA/stdexec)
-(an implementation of P2300) algorithms for its execution.
-
-Library assumes stdexec to be present while compilation.
-
-### Pure Algorithmic
-mraylib algorithms depends on concepts (requirements) instead of depending
-on concrete types. For example render algorithm depends on `OutputRandomAccessImage`
-concept instead of depending on any specific image implementation.
-A library user can use any type that satisfies these concepts for algorithms.
-
-## A sample Program
-
-```cpp
 #include "mraylib.hpp"
 #include <fstream>
 #include <vector>
@@ -93,11 +57,3 @@ int main() {
   stdexec::sync_wait(renderer.render(bvh, img));
   write_ppm_img(os, img);
 }
-```
-
-### Examples
-Some examples with different features can be found in `examples/` directory.
-
-## Credits
-
-- [Ray Tracing In One Weekend](https://raytracing.github.io/)
