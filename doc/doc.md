@@ -37,7 +37,7 @@ In code we call the reference to execution context as **Scheduler**.
 
 We look the world through eyes. As our eyes move or change its orientation,
 how the world looks changes. In terms of ray tracing camera acts as our eyes and
-camera orientation as orientation of our eyes (e.g., we are facing forward by
+camera orientation as orientation of our eyes (e.g., we are facing forward but
 our eye is looking upwards).
 
 There is subtle difference between how both works. In case of eye, we capture
