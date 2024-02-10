@@ -86,3 +86,10 @@ A library user can use any type that satisfies these concepts for algorithms.
   stdexec::sync_wait(renderer.render(bvh, img));
   write_ppm_img(os, img);
 ```
+
+### Examples
+Some examples with different features can be found in `examples/` directory.
+
+## Credits
+
+- [Ray Tracing In One Weekend](https://raytracing.github.io/)
