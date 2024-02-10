@@ -4,6 +4,9 @@
 #include <fstream>
 #include <vector>
 
+// Output:
+// https://github.com/RishabhRD/mraylib/assets/26287448/17ac143d-007d-4d45-910e-048ce1ffd79b
+
 using namespace mrl;
 
 int main() {

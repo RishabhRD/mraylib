@@ -3,6 +3,9 @@
 #include <fstream>
 #include <vector>
 
+// Output:
+// https://github.com/RishabhRD/mraylib/assets/26287448/adecba25-c86a-4e29-bb7e-f67d4e6cbbfe
+
 using namespace mrl;
 
 // NOTE: This example depends on third part stb library

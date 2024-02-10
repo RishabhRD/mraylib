@@ -2,6 +2,9 @@
 #include <fstream>
 #include <vector>
 
+// Output:
+// https://github.com/RishabhRD/mraylib/assets/26287448/f6902c2c-396a-46d7-bba9-52fac2bd1f3b
+
 using namespace mrl;
 
 int main() {

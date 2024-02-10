@@ -2,6 +2,9 @@
 #include <fstream>
 #include <vector>
 
+// Output:
+// https://github.com/RishabhRD/mraylib/assets/26287448/4b53c022-f152-4794-a327-012b9673ae85
+
 using namespace mrl;
 namespace rng = std::ranges;
 
