@@ -41,8 +41,8 @@ camera orientation as orientation of our eyes (e.g., we are facing forward but
 our eye is looking upwards).
 
 There is subtle difference between how both works. In case of eye, we capture
-the all the rays coming to us. However, this is very computationally
-expensive. In case of camera, we send the rays in opposite direction from
+the all the rays coming to us. However, this is computationally
+very expensive. In case of camera, we send the rays in opposite direction from
 camera and observe it after iteraction with world.
 
 ### World
