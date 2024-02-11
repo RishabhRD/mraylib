@@ -34,7 +34,7 @@ based on our usecase.
 Execution context determines where the rendering algorithm runs.
 In code we call the reference to execution context as **Scheduler**.
 
-### Camera && Camera Orientation
+### Camera and Camera Orientation
 
 We look the world through eyes. As our eyes move or change its orientation,
 how the world looks changes. In terms of ray tracing camera acts as our eyes and
@@ -417,3 +417,231 @@ Currently we have following materials inbuilt:
 - lambertian
 - dielectric
 - diffuse_light
+
+### SceneObject and HitObject
+
+SceneObject is what ray actually interacts with. Renderer thinks SceneObject
+as world. When ray hits SceneObject, it hits some part of it. The part got
+hit is called HitObject.
+
+SceneObject encapsulates all the details of shapes, materials, textures, etc
+and present a higher level picture to rendering algorithm. Rendering algorithm
+doesn't know anything about internal details like shapes, materials, textures,
+etc.
+
+Let's look at SceneObject:
+```cpp
+template <typename Object>
+concept Hittable =
+    requires(Object const &obj, ray_t const &ray, interval_t const &interval) {
+      typename hit_object_t<Object>;
+      {
+        hit(obj, ray, interval)
+      } -> std::same_as<std::optional<hit_info_t<hit_object_t<<Object>>>>;
+    };
+
+template <typename Object>
+concept SceneObject = Hittable<Object>;
+```
+
+SceneObject only cares about hit:
+- What type you get, when ray hits the object. (hit_object_t<Object>)
+- And hit_info you get if ray hits the object in a certain distance inteval.
+
+If ray doesn't hit, hit should return nullopt.
+
+Defining hit_object_t is simple. Let's say you have a SceneObject of type
+Obj, then you can do any one of 2 things:
+
+```cpp
+struct Obj{
+  using hit_object_type = <something>;
+  ... (implementation of Obj)
+};
+```
+```cpp
+struct Obj{
+  ... (implementation of Obj)
+};
+
+template <>
+struct hit_object<Obj>{
+  using type = <something>;
+};
+```
+
+Second method is really useful when you can't modify struct Obj.
+
+hit_info_t is a simple struct to encapsulate information about the ray hit:
+```cpp
+template <typename HitObject> struct hit_info_t {
+  using hit_object_t = HitObject;
+
+  double hit_distance;
+  hit_object_t hit_object;
+};
+```
+It simply contains the hit_distance and the hit_object.
+
+Let's define a really simple obvious SceneObject aka shape_object. shape_object
+is made up of a shape and a material.
+
+Let's first declare shape_object:
+```cpp
+template <Shape shape_t, typename material_t> struct shape_object;
+```
+
+Let's define the HitObject for the shape_object:
+```cpp
+template <Shape shape_t, typename material_t> struct shape_hit_object {
+  shape_object<shape_t, material_t> const *obj;
+};
+```
+
+And now finally define the shape_object:
+```cpp
+template <Shape shape_t, typename material_t> struct shape_object {
+  using shape_type = shape_t;
+  using material_type = material_t;
+  using hit_object_type = shape_hit_object<shape_t, material_t>;
+
+  shape_type shape;
+  material_type material;
+
+  constexpr shape_object(shape_type shape_, material_type material_)
+      : shape(std::move(shape_)), material(std::move(material_)) {}
+};
+
+// Use CTAD for easy initialization
+template <Shape shape_t, typename material_t>
+shape_object(shape_t, material_t) -> shape_object<shape_t, material_t>;
+```
+
+For meeting expectations of ShapeObject, we need to define the hit function:
+```cpp
+template <Shape shape_t, typename material_t>
+constexpr std::optional<hit_info_t<shape_hit_object<shape_t, material_t>>>
+hit(shape_object<shape_t, material_t> const &obj, ray_t const &ray,
+    interval_t const &interval) {
+  auto hit_dist_opt = ray_hit_distance(obj.shape, ray, interval);
+  if (!hit_dist_opt) {
+    return std::nullopt;
+  }
+  return hit_info_t<shape_hit_object<shape_t, material_t>>{
+      *hit_dist_opt, shape_hit_object<shape_t, material_t>{&obj}};
+}
+```
+
+And get_bounds for supporting bvh acceleration:
+```cpp
+template <Shape shape, typename material_t>
+constexpr bound_t get_bounds(shape_object<shape, material_t> const &obj) {
+  return get_bounds(obj.shape);
+}
+```
+
+Now we have ShapeObject, but shape_hit_object is currently useless. For
+it being useful, it should follow HitObject concept:
+
+```cpp
+template <typename Object, typename Generator>
+concept HitObject =
+    DoubleGenerator<Generator> &&
+    // Precondition:
+    //   - p is a point on surface of obj
+    requires(Object const &obj, generator_view<Generator> rand, point3 const &p,
+             ray_t const &r, double hit_distance) {
+      { normal_at(obj, p) } -> std::same_as<direction_t>;
+      { scaling_2d_at(obj, p) } -> std::same_as<scale_2d_t>;
+      {
+        scattering_for(obj, r, hit_distance, rand)
+      } -> std::same_as<std::optional<scatter_info_t>>;
+      { emission_at(obj, p, rand) } -> std::same_as<std::optional<emit_info_t>>;
+    };
+```
+
+We can do following query to HitObject:
+- What is normal at any point on its surface?
+- Where does any point on surface belong to 2d scaling?
+- What would would scattering for ray r hitting at hit_distance?
+- What would be emission at any point on the surface?
+
+HitObject may or may not scatter or emit ray. In those cases, they can return
+nullopt.
+
+**NOTE:** It is assumed that the parent scene object is alive during these
+queries.
+
+Now, let's make our shape_hit_object to model HitObject:
+
+```cpp
+template <Shape shape_t, typename material>
+constexpr auto normal_at(shape_hit_object<shape_t, material> const &o,
+                         point3 const &p) {
+  return normal_at(o.obj->shape, p);
+}
+
+template <Shape shape_t, typename material>
+constexpr auto scaling_2d_at(shape_hit_object<shape_t, material> const &o,
+                             point3 const &p) {
+  return scaling_2d_at(o.obj->shape, p);
+}
+
+template <DoubleGenerator Generator, Shape shape_t, typename material_t>
+constexpr std::optional<scatter_info_t>
+scattering_for(shape_hit_object<shape_t, material_t> const &o, ray_t const &r,
+               double hit_distance, generator_view<Generator> rand) {
+  if constexpr (LightScatterer<material_t, Generator>) {
+    auto const &material = o.obj->material;
+    auto ctx = make_scattering_context(o, r, hit_distance);
+    return scatter(material, ctx, rand);
+  } else {
+    return std::nullopt;
+  }
+}
+
+template <DoubleGenerator Generator, Shape shape_t, typename material_t>
+constexpr std::optional<emit_info_t>
+emission_at(shape_hit_object<shape_t, material_t> const &o, point3 const &p,
+            generator_view<Generator> rand) {
+  if constexpr (LightEmitter<material_t, Generator>) {
+    auto const &material = o.obj->material;
+    auto ctx = make_emission_context(o, p);
+    return emit(material, ctx, rand);
+  } else {
+    return std::nullopt;
+  }
+}
+```
+
+Currently we have following SceneObject inbuilt:
+- shape_object
+- object_ref (just a reference wrapper to an object)
+- translate_object
+- rotate_object
+- any_object (type erased scene object)
+
+Any std::ranges::input_range<T> where T is a SceneObject is also a SceneObject
+automatically.
+
+any_object helps to have hetrogeneous collection of scene objects.
+For example:
+```cpp
+  auto const num_threads = std::thread::hardware_concurrency();
+  auto th_pool = thread_pool{num_threads};
+  auto sch = th_pool.get_scheduler();
+  using any_object = any_object_t<decltype(sch)>;
+
+  std::vector<any_object> world;
+
+  lambertian_t mat1{color_t{0.4, 0.2, 0.1}};
+  metal_t mat2(color_t{0.7, 0.6, 0.5});
+
+  shape_object obj1{sphere{1.0, point3{0, 1, 0}}, mat1};
+  shape_object obj2{sphere{1.0, point3{-4, 1, 0}}, mat2};
+
+  // obj1 and obj2 are of different type because of being of different material
+  // but can be pushed to world:
+  world.push_back(obj1);
+  world.push_back(obj2);
+```
