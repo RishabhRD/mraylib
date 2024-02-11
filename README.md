@@ -106,6 +106,13 @@ for handling it through cmake would be appreciated). Then execute:
 ./build
 ```
 
+## Future Goals
+- Explore more in terms of parallelism
+- Explore more in terms of acceleration structures
+- Explore more in terms of improving codebase and improving code in terms of
+  design by contract without degrading performance
+- Performance optimizations
+
 ## Credits
 
 - [Ray Tracing In One Weekend](https://raytracing.github.io/)
