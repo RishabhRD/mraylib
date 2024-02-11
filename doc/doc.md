@@ -6,6 +6,7 @@ Documentation covers following in detail:
 - Different components involved
 - Randomness Used
 - Defining concepts used
+- A full program
 
 ## A sample program structure
 
@@ -644,4 +645,142 @@ For example:
   // but can be pushed to world:
   world.push_back(obj1);
   world.push_back(obj2);
+```
+
+### bvh_t and bound_t
+
+bvh is an acceleration data structure, that is also a SceneObject.
+Using this structure, ray doesn't need to hit all objects inside it, but
+only logarithmic number of those objects.
+
+So, it converts hit from O(n) to O(log n).
+
+bound_t is axis aligned bound. It is a cuboid that is aligned with X,Y and Z
+axes (i.e., 2 faces are parallel 2 x-axis, 2 to y-axis and 2 to z-axis).
+
+This represent a bound around object that object is encapsulated inside the
+bounds.
+
+We want to explore more on acceleration structure and any contribution towards
+it is highly appreciated.
+
+bound_t is really simple:
+```cpp
+struct bound_t {
+  interval_t x_range;
+  interval_t y_range;
+  interval_t z_range;
+};
+```
+
+### Sampler
+
+Rendering algorithm actually sends multiple ray to generate a single pixel. It
+averages the result of multiple rays to render that pixel. This is done to
+reduce the noise and errors.
+
+Sampler concepts is there for determining the sample points for that pixel.
+
+It nees a sampler_args_t:
+```cpp
+struct sampler_args_t {
+  point3 point;       // point on viewport through which ray is sent and that maps to a pixel
+  vec3 pixel_delta_u; // distance between 2 pixels in x direction
+  vec3 pixel_delta_v; // distance between 2 pixels in y direction
+};
+```
+
+Concept sampler is as follows:
+
+```cpp
+template <typename Sampler, typename random_generator>
+concept PixelSampler =
+    DoubleGenerator<random_generator> &&
+    requires(Sampler const &sampler, sampler_args_t const &args,
+             generator_view<random_generator> gen_random) {
+      // Postcondition:
+      //   - Let's say returned range is rng
+      //   - size(rng) >= 1
+      //   - All points in rng should lie on viewport plane
+      { sampler(args, gen_random) } -> std::ranges::input_range<T> && RangeValueType<T, point3>;;
+    };
+```
+
+A really simple sampler is a sampler that just returns the point from which
+ray was sent:
+```cpp
+struct identity_sampler {
+  template <DoubleGenerator Generator>
+  constexpr auto operator()(sampler_args_t const &args,
+                            generator_view<Generator>) const {
+    return std::views::single(args.point);
+  }
+};
+```
+
+## A full program
+
+```cpp
+#include "mraylib.hpp"
+#include <fstream>
+#include <vector>
+
+// Output:
+// https://github.com/RishabhRD/mraylib/assets/26287448/86d083e7-6f4d-4879-aee0-819189a8c81d
+
+using namespace mrl;
+
+int main() {
+  // Configure Execution Context
+  auto const num_threads = std::thread::hardware_concurrency();
+  auto th_pool = thread_pool{num_threads};
+  auto sch = th_pool.get_scheduler();
+
+  // Configure camera (how we look into the world)
+  camera_t camera{
+      .focus_distance = 10.0,
+      .vertical_fov = degrees(20),
+      .defocus_angle = degrees(0.0),
+  };
+  camera_orientation_t camera_orientation{
+      .look_from = {13, 2, 3},
+      .look_at = point3(0, 0, 0),
+      .up_dir = direction_t{0, 1, 0},
+  };
+
+  // Defining the world
+  using any_object = any_object_t<decltype(sch)>;
+  std::vector<any_object> world;
+  dielectric mat1(1.5);
+  lambertian_t mat2(color_t{0.4, 0.2, 0.1});
+  metal_t mat3(color_t{0.7, 0.6, 0.5});
+
+  auto checker = lambertian_t{
+      checker_texture{0.32, solid_color_texture{from_rgb(38, 39, 41)},
+                      solid_color_texture{color_t{.9, .9, .9}}}};
+
+  world.push_back(shape_object{sphere{1.0, point3{0, 1, 0}}, mat1});
+  world.push_back(shape_object{sphere{1.0, point3{-4, 1, 0}}, mat2});
+  world.push_back(shape_object{sphere{1.0, point3{4, 1, 0}}, mat3});
+  world.push_back(shape_object{sphere{1000.0, point3{0, -1000, 0}}, checker});
+  // Acceleration structure for handling large number of objects
+  bvh_t<any_object> bvh{std::move(world)};
+
+  // Defining Image
+  aspect_ratio_t ratio{16, 9};
+  auto img_width = 600;
+  auto img_height = image_height(ratio, img_width);
+  in_memory_image img{img_width, img_height};
+  auto path = std::getenv("HOME") + std::string{"/readme.ppm"};
+  std::ofstream os(path, std::ios::out);
+
+  // Actually run the algorithm
+  auto background = color_t{0.7, 0.8, 1.0};
+  auto cur_time = static_cast<unsigned long>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+  img_renderer_t renderer(camera, camera_orientation, background, sch,
+                          cur_time);
+  stdexec::sync_wait(renderer.render(bvh, img));
+  write_ppm_img(os, img);
+}
 ```
