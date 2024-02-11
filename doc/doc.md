@@ -271,3 +271,149 @@ constexpr bound_t get_bounds(sphere const &sphere) {
 ```
 
 We would discuss about bvh and bound_t later.
+
+Currently we have sphere and quad inbuilt shape in library.
+
+### Materials and Textures
+
+An object may have a shape, but only shape doesn't determine how ray
+interact with object. If object is rough, then ray interact in irregular
+fashion, but if object is smooth, ray interacts according to law of reflection.
+If object is transparent, then we have refraction.
+
+So, material of object determines how ray interacts with object. Mainly
+it determines:
+- How rays scatter after hitting
+- If material emit some rays (like sun)
+- What would be the impact of color of resulting ray.
+
+While material describes the interaction of rays with object. Texture describes
+how material looks. Let's say its a solid red color material with rough surface.
+So, this information of solid red color is what texture describes.
+
+A material can be a light scatterer or a light emitter.
+
+```cpp
+template <typename T, typename Generator>
+concept LightScatterer =
+    DoubleGenerator<Generator> &&
+    requires(T const &material, scattering_context const &ctx,
+             generator_view<Generator> rand) {
+      {
+        scatter(material, ctx, rand)
+      } -> std::same_as<std::optional<scatter_info_t>>;
+    };
+
+template <typename T, typename Generator>
+concept LightEmitter = DoubleGenerator<Generator> &&
+                       requires(T const &light, emission_context const ctx,
+                                generator_view<Generator> rand) {
+                         {
+                           emit(light, ctx, rand)
+                         } -> std::same_as<std::optional<emit_info_t>>;
+                       };
+```
+
+Here we see that scatter and emit function takes an additional double random
+generator parameter as argument. They can use this argument for any sort
+of randomness required.
+
+Similarily, we have Texture concept:
+```cpp
+template <typename T, typename Generator>
+concept Texture =
+    DoubleGenerator<Generator> &&
+    requires(T const &texture, scale_2d_t const &coord, point3 const &hit_point,
+             generator_view<Generator> rand) {
+      {
+        texture_color(texture, coord, hit_point, rand)
+      } -> std::same_as<color_t>;
+    }
+```
+
+Let's see how we can write a custom simple texture and using that how can we
+write a custom simple material.
+
+Let's start with a texture, that is simply of same color everywhere. We
+would call it solid_color_texture.
+
+```cpp
+struct solid_color_texture {
+  color_t color;
+};
+```
+It literally just needs a color.
+
+Now let's define a function to support texture_color of our concept Texture.
+
+```cpp
+template <DoubleGenerator Generator>
+constexpr color_t texture_color(solid_color_texture const &texture,
+                                scale_2d_t const &, point3 const &,
+                                generator_view<Generator>) {
+  return texture.color;
+}
+```
+
+scale_2d_t is a non-obvious argument to texture_color. This is needed when
+texture wants to pick color from some 2d matrix like an image. So, we need
+this mapping of 3d view to 2d view and vice-versa.
+
+Currently we have following textures inbuilt:
+- solid_color
+- perlin_texture
+- image_texture
+- checker_texture
+
+Now, let's define a material that is rough is nature. This is kind of
+similar material like a wall. It looks the same way no matter from where we
+look from. We call this lambertian material. It only scatters light not
+emit any light, thus its a LightScatterer.
+
+```cpp
+template <typename Texture> struct lambertian_t {
+  Texture texture;
+};
+```
+
+Now let's define the scatter function for LightScatterer.
+
+```cpp
+constexpr std::optional<scatter_info_t>
+lambertian_scatter(color_t const &material_color, ray_t const &in_ray,
+                   point3 hit_point, direction_t normal,
+                   direction_t const &random_dir) {
+  normal = normal_dir(normal, in_ray.direction);
+  auto scatter_dir = normal.val() + random_dir.val();
+  if (near_zero(scatter_dir))
+    scatter_dir = normal.val();
+  auto scattered_ray = ray_t{
+      .origin = hit_point,
+      .direction = scatter_dir,
+  };
+  auto attenuation = material_color;
+  return scatter_info_t{
+      .scattered_ray = scattered_ray,
+      .attenuated_color = attenuation,
+  };
+}
+
+template <DoubleGenerator Generator, Texture<Generator> texture_t>
+constexpr auto scatter(lambertian_t<texture_t> const &material,
+                       scattering_context const &ctx,
+                       generator_view<Generator> rand) {
+  auto color =
+      texture_color(material.texture, ctx.scaling_2d, ctx.hit_point, rand);
+  return lambertian_scatter(color, ctx.ray, ctx.hit_point, ctx.normal,
+                            direction_generator{}(rand));
+}
+```
+
+Here if light scatters in a random fashion, it resembles the apperance of
+a wall like material.
+
+Currently we have following materials inbuilt:
+- metal
+- lambertian
+- dielectric
+- diffuse_light
