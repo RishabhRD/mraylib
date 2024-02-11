@@ -106,6 +106,9 @@ for handling it through cmake would be appreciated). Then execute:
 ./build
 ```
 
+### Documentation
+Docs can be found in `doc/` directory.
+
 ## Future Goals
 - Explore more in terms of parallelism
 - Explore more in terms of acceleration structures
