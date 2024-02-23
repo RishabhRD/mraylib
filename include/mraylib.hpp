@@ -1,11 +1,3 @@
-// INFO: Needed for libdispatch to compile with GCC
-#ifndef __has_feature
-#define __has_feature(x) false
-#endif
-#ifndef __has_extension
-#define __has_extension(x) false
-#endif
-
 #include "angle.hpp"
 #include "aspect_ratio.hpp"
 #include "bound.hpp"
