@@ -2,7 +2,6 @@
 
 // TODO: This is needed for libdispatch to compile with GCC. Need to look for
 // workaround.
-#include <concepts>
 #ifndef __has_feature
 #define __has_feature(x) false
 #endif
@@ -12,6 +11,7 @@
 
 #include "generator/thread_local_random_double_generator.hpp"
 #include "stdexec/execution.hpp"
+#include <concepts>
 #include <dispatch/dispatch.h>
 
 namespace mrl {
