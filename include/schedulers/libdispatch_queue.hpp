@@ -1,5 +1,6 @@
 #pragma once
 
+#include "generator/thread_local_random_double_generator.hpp"
 #include "stdexec/execution.hpp"
 #include <dispatch/dispatch.h>
 
@@ -17,6 +18,7 @@ struct libdispatch_queue;
 struct libdispatch_scheduler {
   using __t = libdispatch_scheduler;
   using __id = libdispatch_scheduler;
+  bool operator==(libdispatch_scheduler const &) const = default;
 
   struct domain {};
 
@@ -81,6 +83,11 @@ struct libdispatch_scheduler {
 
   libdispatch_queue *pool;
 };
+
+inline auto random_generator(libdispatch_scheduler const &,
+                             unsigned long random_seed) {
+  return mrl::thread_local_random_double_generator{random_seed};
+}
 
 struct libdispatch_queue {
   bool operator==(libdispatch_queue const &) const = default;

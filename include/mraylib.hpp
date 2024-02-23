@@ -1,3 +1,11 @@
+// INFO: Needed for libdispatch to compile with GCC
+#ifndef __has_feature
+#define __has_feature(x) false
+#endif
+#ifndef __has_extension
+#define __has_extension(x) false
+#endif
+
 #include "angle.hpp"
 #include "aspect_ratio.hpp"
 #include "bound.hpp"
@@ -54,8 +62,7 @@
 #include "scene_objects/translate_object.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/inline_scheduler.hpp"
-#include "schedulers/static_thread_pool_scheduler.hpp"
-#include "schedulers/thread_pool.hpp"
+#include "schedulers/libdispatch_queue.hpp"
 #include "schedulers/type_traits.hpp"
 #include "std/algorithm.hpp"
 #include "std/btree.hpp"

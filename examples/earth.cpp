@@ -1,5 +1,6 @@
 #include "image/stb_image.hpp"
 #include "mraylib.hpp"
+#include "schedulers/libdispatch_queue.hpp"
 #include <fstream>
 #include <vector>
 
@@ -11,9 +12,8 @@ using namespace mrl;
 // NOTE: This example depends on third part stb library
 int main() {
   // Configure Execution Context
-  auto const num_threads = std::thread::hardware_concurrency();
-  auto th_pool = thread_pool{num_threads};
-  auto sch = th_pool.get_scheduler();
+  libdispatch_queue queue;
+  auto sch = queue.get_scheduler();
 
   // Configure camera (how we look into the world)
   camera_t camera{

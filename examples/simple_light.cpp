@@ -9,9 +9,8 @@ using namespace mrl;
 
 int main() {
   // Configure Execution Context
-  auto const num_threads = std::thread::hardware_concurrency();
-  auto th_pool = thread_pool{num_threads};
-  auto sch = th_pool.get_scheduler();
+  libdispatch_queue queue;
+  auto sch = queue.get_scheduler();
 
   auto cur_time = static_cast<unsigned long>(
       std::chrono::system_clock::now().time_since_epoch().count());
