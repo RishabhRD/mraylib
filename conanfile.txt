@@ -1,5 +1,6 @@
 [requires]
 doctest/2.4.11
+stb/cci.20230920
 
 [generators]
 CMakeDeps

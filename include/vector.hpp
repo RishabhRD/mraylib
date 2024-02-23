@@ -1,5 +1,6 @@
 #pragma once
 
+#include "angle.hpp"
 #include "utils/double_utils.hpp"
 #include <cmath>
 #include <concepts>

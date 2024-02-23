@@ -11,20 +11,18 @@
 #include "image/concepts.hpp"
 #include "image/in_memory_image.hpp"
 #include "interval.hpp"
+#include "materials/emit_info.hpp"
 #include "pixel_sampler/concepts.hpp"
 #include "pixel_sampler/delta_sampler.hpp"
 #include "ray.hpp"
 #include "scene_objects/concepts.hpp"
-#include "scene_objects/shapes/sphere.hpp"
+#include "scene_objects/translate_object.hpp"
 #include "schedulers/concepts.hpp"
 #include "schedulers/type_traits.hpp"
-#include "std/ranges.hpp"
 #include "vector.hpp"
 #include <cmath>
 #include <functional>
 #include <limits>
-#include <ranges>
-#include <stdexec/__detail/__execution_fwd.hpp>
 #include <stdexec/execution.hpp>
 #include <type_traits>
 
@@ -40,44 +38,52 @@ struct rendering_context_t {
   vec3 camera_position;
 };
 
-constexpr std::pair<vec3, vec3>
-viewport_direction(camera_orientation_t const &o) {
-  auto right = normalize(cross(o.direction.val(), o.up_dir.val()));
-  return {right, -o.up_dir.val()};
+constexpr std::pair<vec3, vec3> viewport_direction(direction_t camera_dir,
+                                                   direction_t up_dir) {
+  auto right = normalize(cross(camera_dir.val(), up_dir.val()));
+  return {right, -up_dir.val()};
 }
 
-constexpr vec3 viewport_topleft(vec3 right, vec3 down,
-                                camera_orientation_t const &o, double f) {
-  return o.position + o.direction.val() * f - right / 2 - down / 2;
+constexpr vec3 viewport_topleft(vec3 right, vec3 down, point3 camera_pos,
+                                direction_t camera_dir, double f) {
+  return camera_pos + camera_dir.val() * f - right / 2 - down / 2;
 }
 
-template <DoubleGenerator Generator, SceneObject<Generator> Object>
+template <DoubleGenerator Generator, SceneObject Object>
 constexpr color_t ray_color(ray_t const &ray, Object const &world, int depth,
+                            color_t const &background_color,
                             generator_view<Generator> rand) {
   if (depth <= 0)
     return {0, 0, 0};
   constexpr static double closeness_limit = 0.001;
-  auto hit_record =
-      hit(world, ray,
-          interval_t{closeness_limit, std::numeric_limits<double>::infinity()},
-          rand);
-  if (hit_record) {
-    auto scattering = hit_record->scattering;
-    if (!scattering.has_value())
-      return {0, 0, 0};
-    auto scattered_ray = scattering->scattered_ray;
-    auto attenuation = scattering->attenuated_color;
-    return attenuation * ray_color(scattered_ray, world, depth - 1, rand);
+  constexpr static auto hit_interval =
+      interval_t{closeness_limit, std::numeric_limits<double>::infinity()};
+  auto const hit_rec_opt = hit(world, ray, hit_interval);
+  if (!hit_rec_opt) {
+    return background_color;
   }
-  auto dir = ray.direction.val();
-  auto a = (dir.y + 1.0) / 2;
-  return (1.0 - a) * color_t{1.0, 1.0, 1.0} + a * color_t{0.5, 0.7, 1.0};
+  auto const hit_distance = hit_rec_opt->hit_distance;
+  auto const hit_point = ray.at(hit_distance);
+  HitObject<Generator> auto const hit_obj = std::move(hit_rec_opt->hit_object);
+  auto const scattering = scattering_for(hit_obj, ray, hit_distance, rand);
+  auto const emitted = emission_at(hit_obj, hit_point, rand)
+                           .value_or(emit_info_t{color_t{0, 0, 0}})
+                           .color;
+
+  if (!scattering)
+    return emitted;
+  auto scattered_ray = scattering->scattered_ray;
+  auto attenuation = scattering->attenuated_color;
+  auto scattering_color =
+      attenuation *
+      ray_color(scattered_ray, world, depth - 1, background_color, rand);
+  return scattering_color + emitted;
 }
 
 // Precondition:
 //   - std::ranges::distance(rng) >= 1
 //   - RayOriginGenerator generates center in defocus disk
-template <DoubleGenerator Generator, SceneObject<Generator> Object,
+template <DoubleGenerator Generator, SceneObject Object,
           std::ranges::input_range VectorRange,
           std::invocable RayOriginGenerator>
   requires RangeValueType<VectorRange, vec3> &&
@@ -85,6 +91,7 @@ template <DoubleGenerator Generator, SceneObject<Generator> Object,
 constexpr color_t sampled_ray_color(RayOriginGenerator &gen_center,
                                     VectorRange const &pixel_points,
                                     Object const &world, int depth,
+                                    color_t const &background_color,
                                     generator_view<Generator> rand) {
   double num_ele = 0.0;
   color_t color{0, 0, 0};
@@ -94,13 +101,13 @@ constexpr color_t sampled_ray_color(RayOriginGenerator &gen_center,
         .origin = ray_origin,
         .direction = pixel_center - ray_origin,
     };
-    color += ray_color(r, world, depth, rand);
+    color += ray_color(r, world, depth, background_color, rand);
     ++num_ele;
   }
   return color / num_ele;
 }
 
-template <Camera camera_t, RandomAccessImage Image>
+template <Camera camera_t, OutputRandomAccessImage Image>
 constexpr auto build_rendering_context(Image &img, camera_t const &camera,
                                        camera_orientation_t const &orientation,
                                        int rendering_depth) {
@@ -109,15 +116,16 @@ constexpr auto build_rendering_context(Image &img, camera_t const &camera,
   auto viewport_height = 2 * h * focus_dist;
   auto viewport_width =
       viewport_height * (static_cast<double>(width(img)) / height(img));
-  auto [u_dir, v_dir] = viewport_direction(orientation);
+  auto camera_dir = direction_t{orientation.look_at - orientation.look_from};
+  auto [u_dir, v_dir] = viewport_direction(camera_dir, orientation.up_dir);
   auto viewport_u = u_dir * viewport_width;
   auto viewport_v = v_dir * viewport_height;
 
   auto pixel_delta_u = viewport_u / width(img);
   auto pixel_delta_v = viewport_v / height(img);
 
-  auto viewport_top_left =
-      viewport_topleft(viewport_u, viewport_v, orientation, focus_dist);
+  auto viewport_top_left = viewport_topleft(
+      viewport_u, viewport_v, orientation.look_from, camera_dir, focus_dist);
 
   auto pixel00_loc = viewport_top_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
@@ -132,14 +140,15 @@ constexpr auto build_rendering_context(Image &img, camera_t const &camera,
       .defocus_disk_u = defocus_disk_u,
       .defocus_disk_v = defocus_disk_v,
       .rendering_depth = rendering_depth,
-      .camera_position = orientation.position,
+      .camera_position = orientation.look_from,
   };
 }
 
-template <DoubleGenerator random_t, SceneObject<random_t> Object,
+template <DoubleGenerator random_t, SceneObject Object,
           PixelSampler<random_t> Sampler>
 constexpr auto generate_pixel(int row, int col, Object const &world,
                               rendering_context_t ctx, Sampler sampler,
+                              color_t const &background_color,
                               generator_view<random_t> rand) {
   auto ray_origin_generator = [ctx, rand] {
     auto p = unit_disk_generator{}(rand);
@@ -156,26 +165,27 @@ constexpr auto generate_pixel(int row, int col, Object const &world,
       },
       rand);
   return sampled_ray_color(ray_origin_generator, std::move(sampling_points),
-                           world, ctx.rendering_depth, rand);
+                           world, ctx.rendering_depth, background_color, rand);
 }
 
-template <Camera camera_t, RandomAccessImage Image, Scheduler scheduler_t,
-          DoubleGenerator random_t, SceneObject<random_t> Object,
+template <Camera camera_t, OutputRandomAccessImage Image, Scheduler scheduler_t,
+          DoubleGenerator random_t, SceneObject Object,
           PixelSampler<random_t> Sampler>
 constexpr auto
 render_image(Object const &world, Image &img, camera_t const &camera,
              camera_orientation_t const &orientation, Sampler sampler,
-             int rendering_depth, scheduler_t scheduler,
-             generator_view<random_t> rand) {
+             int rendering_depth, color_t const &background_color,
+             scheduler_t scheduler, generator_view<random_t> rand) {
   auto rendering_ctx =
       build_rendering_context(img, camera, orientation, rendering_depth);
 
-  auto set_pixel_at_coord = [&img, &world, rendering_ctx, sampler,
-                             rand](auto coord) {
-    auto row = coord / width(img);
-    auto col = coord % width(img);
-    auto color = generate_pixel(row, col, world, rendering_ctx, sampler, rand);
-    set_pixel_at(img, row, col, color);
+  auto set_pixel_at_coord = [&img, &world, rendering_ctx, sampler, rand,
+                             background_color](auto coord) {
+    auto x = coord % width(img);
+    auto y = coord / width(img);
+    auto color = generate_pixel(y, x, world, rendering_ctx, sampler,
+                                background_color, rand);
+    set_pixel_at(img, x, y, color);
   };
 
   return stdexec::schedule(scheduler) |
@@ -189,41 +199,46 @@ struct img_renderer_t {
   static_assert(PixelSampler<Sampler, random_generator_t>);
   camera_t camera;
   camera_orientation_t camera_orientation;
+  color_t background_color;
   scheduler_t scheduler;
   random_generator_t gen;
   int rendering_depth;
   Sampler sampler;
 
   img_renderer_t(camera_t camera_, camera_orientation_t camera_orientation_,
-                 scheduler_t scheduler_, random_generator_t rand_,
-                 int rendering_depth_ = 50,
+                 color_t const &background_color_, scheduler_t scheduler_,
+                 random_generator_t rand_, int rendering_depth_ = 50,
                  Sampler sampler_ = delta_sampler(100))
       : camera{std::move(camera_)},
         camera_orientation{std::move(camera_orientation_)},
-        scheduler(std::move(scheduler_)), gen(std::move(rand_)),
-        rendering_depth(rendering_depth_), sampler{std::move(sampler_)} {}
+        background_color(background_color_), scheduler(std::move(scheduler_)),
+        gen(std::move(rand_)), rendering_depth(rendering_depth_),
+        sampler{std::move(sampler_)} {}
 
   img_renderer_t(camera_t camera_, camera_orientation_t camera_orientation_,
-                 scheduler_t scheduler_, int rendering_depth_ = 100,
+                 color_t const &background_color_, scheduler_t scheduler_,
+                 unsigned long random_seed = 0, int rendering_depth_ = 100,
                  Sampler sampler_ = delta_sampler(50))
       : img_renderer_t(std::move(camera_), std::move(camera_orientation_),
-                       scheduler_, random_generator(scheduler_),
+                       background_color_, scheduler_,
+                       random_generator(scheduler_, random_seed),
                        rendering_depth_, std::move(sampler_)) {}
 
-  template <SceneObject<random_generator_t> Object, RandomAccessImage Image>
+  template <SceneObject Object, OutputRandomAccessImage Image>
   constexpr auto render(Object const &world, Image &img) {
     return render_image(world, img, camera, camera_orientation, sampler,
-                        rendering_depth, scheduler, generator_view{gen});
+                        rendering_depth, background_color, scheduler,
+                        generator_view{gen});
   }
 };
 
 template <Camera camera_t, Scheduler scheduler_t, typename Sampler>
-img_renderer_t(camera_t, camera_orientation_t, scheduler_t,
+img_renderer_t(camera_t, camera_orientation_t, color_t const &, scheduler_t,
                typename img_renderer_t<camera_t, scheduler_t,
                                        Sampler>::random_generator_t &,
                int, Sampler) -> img_renderer_t<camera_t, scheduler_t, Sampler>;
 
 template <Camera camera_t, Scheduler scheduler_t, typename Sampler>
-img_renderer_t(camera_t, camera_orientation_t, scheduler_t, int, Sampler)
-    -> img_renderer_t<camera_t, scheduler_t, Sampler>;
+img_renderer_t(camera_t, camera_orientation_t, color_t const &, scheduler_t,
+               int, Sampler) -> img_renderer_t<camera_t, scheduler_t, Sampler>;
 } // namespace mrl

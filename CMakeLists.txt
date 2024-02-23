@@ -5,7 +5,7 @@ include(cmake/StandardProjectSettings.cmake)
 include(cmake/CompilerWarnings.cmake)
 include(package.cmake)
 
-add_compile_options(-std=c++2b -fconcepts-diagnostics-depth=3)
+add_compile_options(-std=c++2b)
 # TODO: clang-tidy creating problem with the same
 # set(CMAKE_CXX_STANDARD 23)
 
@@ -21,4 +21,4 @@ if(ENABLE_TESTING)
   add_subdirectory(tests)
 endif()
 
-add_subdirectory(src)
+add_subdirectory(examples)

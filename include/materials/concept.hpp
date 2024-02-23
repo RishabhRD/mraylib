@@ -2,22 +2,28 @@
 
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
-#include "materials/scatter_record.hpp"
-#include "point.hpp"
-#include "ray.hpp"
-#include "vector.hpp"
+#include "materials/emit_info.hpp"
+#include "materials/material_context.hpp"
+#include "materials/scatter_info.hpp"
 #include <optional>
 
 namespace mrl {
 template <typename T, typename Generator>
-concept Material =
+concept LightScatterer =
     DoubleGenerator<Generator> &&
-    requires(T &material, ray_t const &ray, point3 const &hit_point,
-             vec3 const &normal, generator_view<Generator> rand) {
-      // Precondition:
-      //   - normal should always point outside of object
+    requires(T const &material, scattering_context const &ctx,
+             generator_view<Generator> rand) {
       {
-        scatter(material, ray, hit_point, normal, rand)
-      } -> std::same_as<std::optional<scatter_record_t>>;
+        scatter(material, ctx, rand)
+      } -> std::same_as<std::optional<scatter_info_t>>;
     };
+
+template <typename T, typename Generator>
+concept LightEmitter = DoubleGenerator<Generator> &&
+                       requires(T const &light, emission_context const ctx,
+                                generator_view<Generator> rand) {
+                         {
+                           emit(light, ctx, rand)
+                         } -> std::same_as<std::optional<emit_info_t>>;
+                       };
 } // namespace mrl

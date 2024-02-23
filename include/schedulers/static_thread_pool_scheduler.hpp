@@ -8,7 +8,8 @@ using static_thread_pool_scheduler = exec::static_thread_pool::scheduler;
 } // namespace mrl
 
 namespace exec {
-inline auto random_generator(mrl::static_thread_pool_scheduler) {
-  return mrl::thread_local_random_double_generator{};
+inline auto random_generator(mrl::static_thread_pool_scheduler,
+                             unsigned long random_seed) {
+  return mrl::thread_local_random_double_generator{random_seed};
 }
 } // namespace exec

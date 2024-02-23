@@ -3,11 +3,14 @@
 #include <random>
 
 namespace mrl {
-class random_double_generator {
+template <typename Generator> class basic_random_double_generator {
 private:
-  std::mt19937 generator;
+  Generator generator;
 
 public:
+  basic_random_double_generator(Generator generator_)
+      : generator(std::move(generator_)) {}
+  basic_random_double_generator(unsigned long seed) : generator(seed) {}
   // Precondition:
   //   - min < max
   //
@@ -18,4 +21,8 @@ public:
     return distribution(generator);
   }
 };
+template <typename Generator>
+basic_random_double_generator(Generator)
+    -> basic_random_double_generator<Generator>;
+using random_double_generator = basic_random_double_generator<std::mt19937>;
 } // namespace mrl

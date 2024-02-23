@@ -1,10 +1,10 @@
 #pragma once
 
-#include "functional.hpp"
 #include "generator/concepts.hpp"
 #include "generator/generator_view.hpp"
 #include "pixel_sampler/sampler_args.hpp"
 #include "point.hpp"
+#include "std/functional.hpp"
 #include "std/ranges.hpp"
 #include "vector.hpp"
 

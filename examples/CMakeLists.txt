@@ -1,0 +1,13 @@
+function(configure_target target)
+  add_executable(${target} ${target}.cpp)
+  target_include_directories(${target} PRIVATE ../include)
+  target_include_directories(${target} SYSTEM PRIVATE ../lib)
+  target_compile_options(${target} PRIVATE -O3)
+  target_link_libraries(${target} PRIVATE project_options project_warnings stb::stb dispatch)
+endfunction()
+
+file(GLOB_RECURSE src_list "**.cpp")
+foreach(source_file ${src_list})
+    get_filename_component(target ${source_file} NAME_WE)
+    configure_target(${target})
+endforeach()
