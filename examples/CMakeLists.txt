@@ -3,7 +3,7 @@ function(configure_target target)
   target_include_directories(${target} PRIVATE ../include)
   target_include_directories(${target} SYSTEM PRIVATE ../lib)
   target_compile_options(${target} PRIVATE -O3)
-  target_link_libraries(${target} PRIVATE project_options project_warnings stb::stb)
+  target_link_libraries(${target} PRIVATE project_options project_warnings stb::stb dispatch)
 endfunction()
 
 file(GLOB_RECURSE src_list "**.cpp")
